@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgtype"
+	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
+	"log"
 	"net/http"
 	"time"
 )
@@ -56,4 +58,13 @@ func (app *application) retrieveID(r *http.Request) (pgtype.UUID, error) {
 		}
 	}
 	return id, nil
+}
+
+func loadEnvVariables() {
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
 }

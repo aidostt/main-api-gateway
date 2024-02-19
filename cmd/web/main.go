@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"reservista/internal/data"
 	"time"
 )
 
@@ -16,9 +17,9 @@ type application struct {
 	cfg           config
 	templateCache map[string]*template.Template
 	formDecoder   *form.Decoder
-	//models        data.Models
-	infoLog  *log.Logger
-	errorLog *log.Logger
+	models        data.Models
+	infoLog       *log.Logger
+	errorLog      *log.Logger
 }
 
 type config struct {
@@ -31,10 +32,11 @@ type config struct {
 }
 
 func main() {
+	loadEnvVariables()
 	var cfg config
 	flag.IntVar(&cfg.port, "port", 4000, "server port")
 
-	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("FORUM_DB_DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("RESERVISTA_DB_DSN"), "PostgreSQL DSN")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max idle time")
 	flag.IntVar(&cfg.db.maxOpenConn, "db-max-open-conn", 25, "PostgreSQL max open connections")
 
@@ -61,7 +63,7 @@ func main() {
 		errorLog:      errorLog,
 		formDecoder:   formDecoder,
 		templateCache: templateCache,
-		//models:        data.NewModels(db),
+		models:        data.NewModels(db),
 	}
 	err = app.serve()
 	if err != nil {
