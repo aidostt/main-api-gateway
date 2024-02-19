@@ -1,6 +1,7 @@
 package data
 
 import (
+	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -8,6 +9,7 @@ type Models struct {
 	Users interface {
 		Insert(*User) error
 		GetByNickname(string) (*User, error)
+		GetByID(uuid pgtype.UUID) (*User, error)
 		Update(*User) error
 		Delete(*User) error
 	}

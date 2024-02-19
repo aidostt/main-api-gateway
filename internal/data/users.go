@@ -145,6 +145,32 @@ func (m UserModel) GetByNickname(nickname string) (*User, error) {
 	}
 	return &user, nil
 }
+func (m UserModel) GetByID(id pgtype.UUID) (*User, error) {
+	query := `
+	SELECT * FROM users 
+	         WHERE id = $1;
+`
+	var user User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err := m.DB.QueryRow(ctx, query, id).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Nickname,
+		&user.Email,
+		&user.Password.hashed,
+		&user.Activated,
+		&user.Version,
+		&user.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNoRecord
+		}
+		return nil, err
+	}
+	return &user, nil
+}
 
 func (m UserModel) Update(user *User) error {
 	query := `
@@ -197,4 +223,17 @@ func (p *password) Set(plaintTextPassword string) error {
 	p.plainText = &plaintTextPassword
 	p.hashed = hash
 	return nil
+}
+
+func (p *password) Matches(plaintextPassword string) (bool, error) {
+	err := bcrypt.CompareHashAndPassword(p.hashed, []byte(plaintextPassword))
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+			return false, nil
+		default:
+			return false, err
+		}
+	}
+	return true, nil
 }
