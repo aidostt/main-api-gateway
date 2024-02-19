@@ -15,8 +15,10 @@ func (app *application) router() http.Handler {
 	fileServer := http.FileServer(http.Dir("../../ui/static/"))
 	router.Handler(http.MethodGet, "/static/*filepath", http.StripPrefix("/static", fileServer))
 
+	router.HandlerFunc(http.MethodGet, "/", app.home)
 	router.HandlerFunc(http.MethodPost, "/user/register", app.createUserHandlerPost)
 	router.HandlerFunc(http.MethodGet, "/user/register", app.createUserHandlerGet)
-
+	router.HandlerFunc(http.MethodPost, "/user/login", app.LogIn)
+	router.HandlerFunc(http.MethodPost, "/user/logout", app.LogOut)
 	return router
 }
