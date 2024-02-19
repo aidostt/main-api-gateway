@@ -1,0 +1,32 @@
+{{define "title"}}Sign up{{end}}
+
+{{define "body"}}
+<body class="grey-background sign-body">
+    <div class="login-form m-auto">
+        <h1 class="logo-font-fm text-center" style="margin-top:20px;margin-bottom: 30px; font-size:50px;">reservista</h1> 
+        <h2 class="m-0">Register</h2>
+        <form action="" method="post">
+            <div class="login-form-body">
+                <div>
+                    <label for="username">Username</label>
+                    <input class="form-input" type="text" name="username">
+                </div>
+                <div>
+                    <label for="email">Email address</label>
+                    <input class="form-input" type="email" name="email">
+                </div>
+                <div>
+                    <label for="password">Password</label>
+                    <input class="form-input" type="password" name="password">
+                </div>
+            </div>
+            <button type="submit" class="btn w-100">Register</button>
+        </form>
+        <div class="login-form-footer text-center">
+            <p>Already have an account?
+                <a href="/user/login">Log in</a>
+            </p>
+        </div>
+    </div>
+</body>
+{{end}}

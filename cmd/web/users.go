@@ -2,12 +2,13 @@ package main
 
 import (
 	"errors"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/jackc/pgtype"
 	"net/http"
 	"reservista/internal/data"
 	"reservista/internal/validator"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/jackc/pgtype"
 )
 
 const SecretKey = "secret"
@@ -60,7 +61,7 @@ func (app *application) createUserHandlerPost(w http.ResponseWriter, r *http.Req
 	form.Validator = *(validator.New())
 	if data.ValidateUser(&(form.Validator), user); !form.Validator.Valid() {
 		d.Form = form
-		app.render(w, http.StatusUnprocessableEntity, "register.tmpl", d)
+		app.render(w, http.StatusUnprocessableEntity, "signup.tmpl", d)
 		return
 	}
 	err = app.models.Users.Insert(user)
@@ -69,11 +70,11 @@ func (app *application) createUserHandlerPost(w http.ResponseWriter, r *http.Req
 		case errors.Is(err, data.ErrDuplicateEmail):
 			form.Validator.AddError("email", "a user with this email already exists.")
 			d.Form = form
-			app.render(w, http.StatusUnprocessableEntity, "register.tmpl", d)
+			app.render(w, http.StatusUnprocessableEntity, "signup.tmpl", d)
 		case errors.Is(err, data.ErrDuplicateNickname):
 			form.Validator.AddError("nickname", "a user with this nickname already exists.")
 			d.Form = form
-			app.render(w, http.StatusUnprocessableEntity, "register.tmpl", d)
+			app.render(w, http.StatusUnprocessableEntity, "signup.tmpl", d)
 		default:
 			app.serverErrorResponse(w, r, err)
 
@@ -86,13 +87,13 @@ func (app *application) createUserHandlerPost(w http.ResponseWriter, r *http.Req
 	//TODO: write activate user endpoint
 
 	d.User = user
-	app.render(w, http.StatusOK, "home.tmpl", d)
+	app.render(w, http.StatusOK, "index.tmpl", d)
 }
 
 func (app *application) createUserHandlerGet(w http.ResponseWriter, r *http.Request) {
 	d := app.newTemplateData(r)
 	d.Form = userCreateForm{}
-	app.render(w, http.StatusOK, "register.tmpl", d)
+	app.render(w, http.StatusOK, "signup.tmpl", d)
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +128,7 @@ func (app *application) LogIn(w http.ResponseWriter, r *http.Request) {
 		form.Validator.AddError("nickname", "wrong nickname or password.")
 		form.Validator.AddError("password", "wrong nickname or password.")
 		d.Form = form
-		app.render(w, http.StatusUnprocessableEntity, "register.tmpl", d)
+		app.render(w, http.StatusUnprocessableEntity, "signin.tmpl", d)
 	}
 
 	id := user.ID.Bytes
@@ -192,7 +193,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	d.User = user
-	app.render(w, http.StatusOK, "home.tmpl", d)
+	app.render(w, http.StatusOK, "index.tmpl", d)
 }
 
 //TODO: activate User
