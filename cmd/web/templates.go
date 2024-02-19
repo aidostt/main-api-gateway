@@ -6,11 +6,12 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"reservista/internal/data"
 	"time"
 )
 
 type templateData struct {
-	//User        *data.User
+	User        *data.User
 	Form        any
 	CurrentYear int
 }
