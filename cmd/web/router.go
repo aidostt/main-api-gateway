@@ -19,6 +19,8 @@ func (app *application) router() http.Handler {
 	router.HandlerFunc(http.MethodPost, "/user/register", app.createUserHandlerPost)
 	router.HandlerFunc(http.MethodGet, "/user/register", app.createUserHandlerGet)
 	router.HandlerFunc(http.MethodPost, "/user/login", app.LogIn)
+	router.HandlerFunc(http.MethodGet, "/user/login", app.LogInGet)
 	router.HandlerFunc(http.MethodPost, "/user/logout", app.LogOut)
+
 	return router
 }

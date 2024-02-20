@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/jackc/pgtype"
 )
 
 const SecretKey = "secret"
@@ -100,6 +99,12 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 
 }
 
+func (app *application) LogInGet(w http.ResponseWriter, r *http.Request) {
+	d := app.newTemplateData(r)
+	d.Form = userCreateForm{}
+	app.render(w, http.StatusOK, "signin.tmpl", d)
+}
+
 func (app *application) LogIn(w http.ResponseWriter, r *http.Request) {
 	//retrieve user's credentials
 	var form userCreateForm
@@ -165,34 +170,34 @@ func (app *application) LogOut(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("jwt")
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-	token, err := jwt.ParseWithClaims(cookie.Value, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return nil, nil
-	})
-	if err != nil {
-		//TODO: return unauthorized access error
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-	claims := token.Claims.(*jwt.StandardClaims)
+	//cookie, err := r.Cookie("jwt")
+	//if err != nil {
+	//	app.serverErrorResponse(w, r, err)
+	//	return
+	//}
+	//token, err := jwt.ParseWithClaims(cookie.Value, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+	//	return nil, nil
+	//})
+	//if err != nil {
+	//	//TODO: return unauthorized access error
+	//	app.serverErrorResponse(w, r, err)
+	//	return
+	//}
+	//claims := token.Claims.(*jwt.StandardClaims)
 	d := app.newTemplateData(r)
-	id := pgtype.UUID{}
-	err = id.DecodeText(nil, []byte(claims.Issuer))
-	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-	user, err := app.models.Users.GetByID(id)
-	if err != nil {
-		//TODO: handle possible panic, because access was gained, but user is not found
-		app.serverErrorResponse(w, r, err)
-		return
-	}
-	d.User = user
+	//id := pgtype.UUID{}
+	//err = id.DecodeText(nil, []byte(claims.Issuer))
+	//if err != nil {
+	//	app.serverErrorResponse(w, r, err)
+	//	return
+	//}
+	//user, err := app.models.Users.GetByID(id)
+	//if err != nil {
+	//	//TODO: handle possible panic, because access was gained, but user is not found
+	//	app.serverErrorResponse(w, r, err)
+	//	return
+	//}
+	//d.User = user
 	app.render(w, http.StatusOK, "index.tmpl", d)
 }
 
