@@ -6,13 +6,14 @@
         <h1 class="logo-font-fm text-center" style="margin-top:20px;margin-bottom: 30px; font-size:50px;">reservista</h1> 
         <h2 class="m-0">Register</h2>
         <form action="" method="post">
+        {{with .Form}}
             <div class="login-form-body">
                 <div>
                     <label for="username">Username</label>
                     {{with .Errors.nickname}}
                                  <label class="error">{{.}}</label>
                              {{end}}
-                    <input class="form-input" type="text" name="username">
+                    <input class="form-input" type="text" name="nickname">
                 </div>
                 <div>
                     <label for="email">Email address</label>
@@ -30,6 +31,7 @@
                 </div>
             </div>
             <button type="submit" class="btn w-100">Register</button>
+            {{end}}
         </form>
         <div class="login-form-footer text-center">
             <p>Already have an account?
