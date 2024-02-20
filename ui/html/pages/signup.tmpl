@@ -9,14 +9,23 @@
             <div class="login-form-body">
                 <div>
                     <label for="username">Username</label>
+                    {{with .Errors.nickname}}
+                                 <label class="error">{{.}}</label>
+                             {{end}}
                     <input class="form-input" type="text" name="username">
                 </div>
                 <div>
                     <label for="email">Email address</label>
+                     {{with .Errors.email}}
+                                 <label class="error">{{.}}</label>
+                             {{end}}
                     <input class="form-input" type="email" name="email">
                 </div>
                 <div>
                     <label for="password">Password</label>
+                    {{with .Errors.password}}
+                                 <label class="error">{{.}}</label>
+                             {{end}}
                     <input class="form-input" type="password" name="password">
                 </div>
             </div>
