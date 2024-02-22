@@ -1,13 +1,14 @@
 {{define "title"}}Discover new restaurants{{end}}
 {{define "body"}}
-<body>
     <div class="container">
         <header class="navbar">
-            <div class="d-flex align-items-center">
-                <h1 class="logo-font-fm m-0 p-0 mr-2 text-center" style="font-size:30px;">reservista</h1> 
+            <div class="d-flex align-center">
+                <a class="text-decor-none" href="/">
+                    <h1 class="logo-font m-0 p-0 mr-2 text-center" style="font-size:30px;">reservista</h1>
+                </a>
                 <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M480-480q33 0 56.5-23.5T560-560q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560q0 33 23.5 56.5T480-480Zm0 294q122-112 181-203.5T720-552q0-109-69.5-178.5T480-800q-101 0-170.5 69.5T240-552q0 71 59 162.5T480-186Zm0 106Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z"/></svg>
                 <p>Astana, Kazakhstan</p>
-                <div class="d-flex align-items-center ml-2"
+                <div class="d-flex align-center ml-2"
                 style="padding: 7px 8px;
                 border-radius: 5px;
                 border: 1px solid #000;">
@@ -16,8 +17,8 @@
                 </div>
             </div>
             <div class="navbar-btn">
-                <a class="btn-primary" href="/user/register">Register</a>
-                <a class="btn-primary" href="/user/login">Log in</a>
+                <a class="btn-primary text-decor-none" href="/user/register">Sign Up</a>
+                <a class="btn-primary text-decor-none" href="/user/login">Log In</a>
             </div>
         </header>
         <main>
@@ -26,44 +27,36 @@
                     <h2>Today's New Arrivals</h2>
                     <div class="group d-flex">
                         <div class="card">
-                            <picture>
-                                <img src="static\images\crepecafe.png">
-                            </picture>
-                            <p class="card-title m-0 p-0">CrepeCafe</p>
-                            <p class="card-subtitle m-0 p-0 mt-1">​Улица Динмухамед Конаев, 12/1</p>
+                            <img style="background-image: url('static/images/crepecafe.png');" class="card-bg-image">
+                            <div class="card-body">
+                                <p class="card-title m-0 p-0">CrepeCafe</p>
+                                <p class="card-subtitle m-0 p-0 mt-1">​Улица Динмухамед Конаев, 12/1</p>
+                            </div>
                         </div>
                         <div class="card">
-                            <picture>
-                                <img src="static\images\melissa.png">
-                            </picture>
-                            <p class="card-title m-0 p-0">Melissa</p>
-                            <p class="card-subtitle m-0 p-0 mt-1">Улица Жекебатыр, 47</p>
+                            <img style="background-image: url('static/images/melissa.png');" class="card-bg-image">
+                            <div class="card-body">
+                                <p class="card-title m-0 p-0">Melissa</p>
+                                <p class="card-subtitle m-0 p-0 mt-1">Улица Жекебатыр, 47</p>
+                            </div>
                         </div>
                         <div class="card">
-                            <picture>
-                                <img style="background-image: url('C:\Users\Kai Samin\Desktop\Front Web\static\images\draft.jpg');" >
-                            </picture>
-                            <p class="card-title m-0 p-0">CrepeCafe</p>
-                            <p class="card-subtitle m-0 p-0 mt-1">​Улица Динмухамед Конаев, 12/1</p>
+                            <img style="background-image: url('static/images/shashlikoff.jpeg');" class="card-bg-image">
+                            <div class="card-body">
+                                <p class="card-title m-0 p-0">ШашлыкоFF</p>
+                                <p class="card-subtitle m-0 p-0 mt-1">​​Амангельды Иманова улица, 52</p>
+                            </div>
                         </div>
                         <div class="card">
-                            <picture>
-                                <img src="static\images\crepecafe.png">
-                            </picture>
-                            <p class="card-title m-0 p-0">CrepeCafe</p>
-                            <p class="card-subtitle m-0 p-0 mt-1">​Улица Динмухамед Конаев, 12/1</p>
-                        </div>
-                        <div class="card">
-                            <picture>
-                                <img src="static\images\crepecafe.png">
-                            </picture>
-                            <p class="card-title m-0 p-0">CrepeCafe</p>
-                            <p class="card-subtitle m-0 p-0 mt-1">​Улица Динмухамед Конаев, 12/1</p>
+                            <img style="background-image: url('static/images/lugano.jpg');" class="card-bg-image">
+                            <div class="card-body">
+                                <p class="card-title m-0 p-0">Lugano</p>
+                                <p class="card-subtitle m-0 p-0 mt-1">​Проспект Абая, 39</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-</body>
 {{end}}
