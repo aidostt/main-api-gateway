@@ -3,32 +3,38 @@ package delivery
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"reservista.kz/internal/service"
-	auth "reservista.kz/pkg/manager"
+	"reservista.kz/pkg/dialog"
+	manager "reservista.kz/pkg/manager"
+	"time"
 )
 
+type Dependencies struct {
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+	Dialog          *dialog.Dialog
+	Environment     string
+	TokenManager    manager.TokenManager
+}
+
 type Handler struct {
-	services     *service.Services
-	tokenManager auth.TokenManager
+	dialog          *dialog.Dialog
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
+	environment     string
+	tokenManager    manager.TokenManager
 }
 
-func NewHandler(services *service.Services, tokenManager auth.TokenManager) *Handler {
+func NewHandler(deps Dependencies) *Handler {
 	return &Handler{
-		services:     services,
-		tokenManager: tokenManager,
-	}
-}
-
-func (h *Handler) initAPI(router *gin.Engine) {
-	handler := NewHandler(h.services, h.tokenManager)
-	api := router.Group("/api")
-	{
-		handler.initUsersRoutes(api)
+		dialog:          deps.Dialog,
+		accessTokenTTL:  deps.AccessTokenTTL,
+		refreshTokenTTL: deps.RefreshTokenTTL,
+		environment:     deps.Environment,
+		tokenManager:    deps.TokenManager,
 	}
 }
 
 func (h *Handler) Init() *gin.Engine {
-
 	router := gin.Default()
 
 	router.Use(
@@ -41,7 +47,10 @@ func (h *Handler) Init() *gin.Engine {
 		c.String(http.StatusOK, "pong")
 	})
 
-	h.initAPI(router)
+	api := router.Group("/api")
+	{
+		h.initUsersRoutes(api)
+	}
 
 	return router
 }

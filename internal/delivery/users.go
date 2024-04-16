@@ -1,11 +1,11 @@
 package delivery
 
 import (
-	"errors"
+	"github.com/aidostt/protos/gen/go/reservista/authentication"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"net/http"
-	"reservista.kz/internal/domain"
-	"reservista.kz/internal/service"
 	"time"
 )
 
@@ -14,13 +14,11 @@ func (h *Handler) initUsersRoutes(api *gin.RouterGroup) {
 	{
 		users.POST("/sign-up", h.userSignUp)
 		users.POST("/sign-in", h.userSignIn)
-		users.POST("/auth/refresh", h.userRefresh)
 		authenticated := users.Group("/", h.userIdentity)
 		authenticated.Use(h.isExpired)
 		{
 			authenticated.GET("/healthcheck", h.healthcheck)
-			users.POST("/sign-out", h.logout)
-
+			authenticated.POST("/sign-out", h.signOut)
 		}
 	}
 }
@@ -32,23 +30,45 @@ func (h *Handler) userSignUp(c *gin.Context) {
 
 		return
 	}
-	tokens, err := h.services.Users.SignUp(c.Request.Context(), service.UserSignUpInput{
+	conn, err := h.dialog.NewConnection(h.dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	auth := proto_auth.NewAuthClient(conn)
+
+	tokens, err := auth.SignUp(c.Request.Context(), &proto_auth.RegisterRequest{
+		Name:     inp.Name,
+		Surname:  inp.Surname,
+		Phone:    inp.Phone,
 		Email:    inp.Email,
 		Password: inp.Password,
 	})
+
 	if err != nil {
-		if errors.Is(err, domain.ErrUserAlreadyExists) {
-			newResponse(c, http.StatusBadRequest, err.Error())
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
 			return
 		}
-		newResponse(c, http.StatusInternalServerError, err.Error())
+		switch st.Code() {
+		case codes.AlreadyExists:
+			newResponse(c, http.StatusBadRequest, "user already exists")
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
 		return
 	}
-	c.SetCookie("jwt", tokens.AccessToken, time.Now().Second()+ATCookieTTL, "/", "", false, true)
-	c.SetCookie("RT", tokens.RefreshToken, time.Now().Second()+RTCookieTTL, "/", "", false, true)
+
+	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.accessTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.refreshTokenTTL).Second(), "/", "", false, true)
 	c.JSON(http.StatusOK, tokenResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
+		AccessToken:  tokens.Jwt,
+		RefreshToken: tokens.Rt,
 	})
 	c.Status(http.StatusCreated)
 }
@@ -59,52 +79,46 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		newResponse(c, http.StatusBadRequest, "invalid input body")
 		return
 	}
-
-	tokens, err := h.services.Users.SignIn(c.Request.Context(), service.UserSignInInput{
+	conn, err := h.dialog.NewConnection(h.dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	auth := proto_auth.NewAuthClient(conn)
+	tokens, err := auth.SignIn(c.Request.Context(), &proto_auth.SignInRequest{
 		Email:    inp.Email,
 		Password: inp.Password,
 	})
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			newResponse(c, http.StatusBadRequest, err.Error())
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
 			return
 		}
-
-		newResponse(c, http.StatusInternalServerError, err.Error())
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "wrong credentials")
+		case codes.NotFound:
+			newResponse(c, http.StatusBadRequest, "user not found")
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
 		return
 	}
-	c.SetCookie("jwt", tokens.AccessToken, time.Now().Second()+ATCookieTTL, "/", "", false, true)
-	c.SetCookie("RT", tokens.RefreshToken, time.Now().Second()+RTCookieTTL, "/", "", false, true)
+
+	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.accessTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.refreshTokenTTL).Second(), "/", "", false, true)
 	c.JSON(http.StatusOK, tokenResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
+		AccessToken:  tokens.Jwt,
+		RefreshToken: tokens.Rt,
 	})
 }
 
-func (h *Handler) userRefresh(c *gin.Context) {
-	token, err := c.Cookie("RT")
-	if err != nil {
-		if errors.Is(err, http.ErrNoCookie) {
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
-			return
-		}
-		newResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	tokens, err := h.services.Session.RefreshTokens(c.Request.Context(), token)
-	if err != nil {
-		newResponse(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	c.SetCookie("jwt", tokens.AccessToken, time.Now().Second()+ATCookieTTL, "/", "", false, true)
-	c.SetCookie("RT", tokens.RefreshToken, time.Now().Second()+RTCookieTTL, "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	})
-}
-
-func (h *Handler) logout(c *gin.Context) {
+func (h *Handler) signOut(c *gin.Context) {
 	c.SetCookie("jwt", "", -1, "/", "", false, true)
 	c.SetCookie("RT", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, healthResponse{

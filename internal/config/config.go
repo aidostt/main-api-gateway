@@ -14,36 +14,36 @@ const (
 	defaultHTTPMaxHeaderMegabytes = 1
 	defaultAccessTokenTTL         = 15 * time.Minute
 	defaultRefreshTokenTTL        = 12 * time.Hour
-
-	EnvLocal = "local"
+	defaultGRPCPort               = "443"
+	authority                     = "api-gateway"
+	EnvLocal                      = "local"
 )
 
 type (
 	Config struct {
-		Environment string
-		Mongo       MongoConfig
-		HTTP        HTTPConfig
-		Auth        AuthConfig
+		Environment  string
+		Authority    string
+		GRPC         GRPCConfig         `mapstructure:"grpc"`
+		Users        MicroserviceConfig `mapstructure:"userMicroservice"`
+		Reservations MicroserviceConfig `mapstructure:"reservationMicroservice"`
+		HTTP         HTTPConfig         `mapstructure:"http"`
+		JWT          JWTConfig          `mapstructure:"jwt"`
 	}
 
-	MongoConfig struct {
-		URI      string
-		User     string
-		Password string
-		Name     string `mapstructure:"databaseName"`
+	GRPCConfig struct {
+		Host    string        `mapstructure:"host"`
+		Port    string        `mapstructure:"port"`
+		Timeout time.Duration `mapstructure:"timeout"`
 	}
-
-	AuthConfig struct {
-		JWT          JWTConfig
-		PasswordSalt string
-	}
-
 	JWTConfig struct {
 		AccessTokenTTL  time.Duration `mapstructure:"accessTokenTTL"`
 		RefreshTokenTTL time.Duration `mapstructure:"refreshTokenTTL"`
 		SigningKey      string
 	}
-
+	MicroserviceConfig struct {
+		Host string `mapstructure:"host"`
+		Port string `mapstructure:"port"`
+	}
 	HTTPConfig struct {
 		Host               string        `mapstructure:"host"`
 		Port               string        `mapstructure:"port"`
@@ -56,7 +56,7 @@ type (
 func Init(configsDir, envDir string) (*Config, error) {
 	populateDefaults()
 	loadEnvVariables(envDir)
-	if err := parseConfigFile(configsDir, ""); err != nil {
+	if err := parseConfigFile(configsDir); err != nil {
 		return nil, err
 	}
 
@@ -71,40 +71,36 @@ func Init(configsDir, envDir string) (*Config, error) {
 }
 
 func unmarshal(cfg *Config) error {
-
-	if err := viper.UnmarshalKey("mongo", &cfg.Mongo); err != nil {
-		return err
-	}
-
 	if err := viper.UnmarshalKey("http", &cfg.HTTP); err != nil {
 		return err
 	}
-
-	return viper.UnmarshalKey("auth", &cfg.Auth.JWT)
+	if err := viper.UnmarshalKey("userMicroservice", &cfg.Users); err != nil {
+		return err
+	}
+	if err := viper.UnmarshalKey("reservationMicroservice", &cfg.Reservations); err != nil {
+		return err
+	}
+	if err := viper.UnmarshalKey("jwt", &cfg.JWT); err != nil {
+		return err
+	}
+	return viper.UnmarshalKey("grpc", &cfg.GRPC)
 }
 
 func setFromEnv(cfg *Config) {
-	cfg.Mongo.URI = os.Getenv("MONGO_URI")
-	cfg.Mongo.User = os.Getenv("MONGO_USER")
-	cfg.Mongo.Password = os.Getenv("MONGO_PASS")
-
-	cfg.Auth.PasswordSalt = os.Getenv("PASSWORD_SALT")
-	cfg.Auth.JWT.SigningKey = os.Getenv("JWT_SIGNING_KEY")
-
 	cfg.HTTP.Host = os.Getenv("HTTP_HOST")
-
-	cfg.Environment = "development"
+	cfg.GRPC.Host = os.Getenv("GRPC_HOST")
+	cfg.Environment = EnvLocal
+	cfg.Authority = authority
+	cfg.JWT.SigningKey = os.Getenv("JWT_SIGNING_KEY")
 }
 
-func parseConfigFile(folder, env string) error {
+func parseConfigFile(folder string) error {
 	viper.AddConfigPath(folder)
 	viper.SetConfigName("main")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return err
 	}
-
-	viper.SetConfigName(env)
 
 	return viper.MergeInConfig()
 }
@@ -120,9 +116,10 @@ func loadEnvVariables(envPath string) {
 
 func populateDefaults() {
 	viper.SetDefault("http.port", defaultHTTPPort)
+	viper.SetDefault("grpc.port", defaultGRPCPort)
 	viper.SetDefault("http.max_header_megabytes", defaultHTTPMaxHeaderMegabytes)
 	viper.SetDefault("http.timeouts.read", defaultHTTPRWTimeout)
 	viper.SetDefault("http.timeouts.write", defaultHTTPRWTimeout)
-	viper.SetDefault("auth.accessTokenTTL", defaultAccessTokenTTL)
-	viper.SetDefault("auth.refreshTokenTTL", defaultRefreshTokenTTL)
+	viper.SetDefault("jwt.accessTokenTTL", defaultAccessTokenTTL)
+	viper.SetDefault("jwt.refreshTokenTTL", defaultRefreshTokenTTL)
 }

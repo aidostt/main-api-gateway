@@ -11,9 +11,7 @@ import (
 
 // TokenManager provides logic for JWT & Refresh tokens generation and parsing.
 type TokenManager interface {
-	NewAccessToken(userId string, ttl time.Duration) (string, error)
 	Parse(accessToken string) (string, error)
-	NewRefreshToken() (string, error)
 	HexToObjectID(string) (primitive.ObjectID, error)
 }
 
@@ -29,16 +27,7 @@ func NewManager(signingKey string) (*Manager, error) {
 	return &Manager{signingKey: signingKey}, nil
 }
 
-func (m *Manager) NewAccessToken(userId string, ttl time.Duration) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		ExpiresAt: time.Now().Add(ttl).Unix(),
-		Subject:   userId,
-	})
-
-	return token.SignedString([]byte(m.signingKey))
-}
-
-// Parse taking from the payload of JWT user id and returns it in string format. Token is still returned
+// Parse taking from the payload of JWT user id and returns it in string format. id is still returned
 // in both cases, if it is expired or not.
 func (m *Manager) Parse(accessToken string) (string, error) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (i interface{}, err error) {

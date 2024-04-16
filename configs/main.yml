@@ -4,9 +4,21 @@ http:
   readTimeout: 10s
   writeTimeout: 10s
 
-mongo:
-  databaseName: reservista
-
 auth:
   accessTokenTTL: 15m
   refreshTokenTTL: 12h
+
+
+grpc:
+  port: 4040
+  timeout: 5s
+
+
+userMicroservice:
+  host: localhost
+  port: 5050
+
+
+reservationMicroservice:
+  host: localhost
+  port: 606
