@@ -17,10 +17,11 @@ type Dialog struct {
 type Addresses struct {
 	Users        string
 	Reservations string
+	QRs          string
 }
 
-func NewDialog(authority, users, reservations string) *Dialog {
-	return &Dialog{authority: authority, Addresses: Addresses{Users: users, Reservations: reservations}}
+func NewDialog(authority, users, reservations, qrs string) *Dialog {
+	return &Dialog{authority: authority, Addresses: Addresses{Users: users, Reservations: reservations, QRs: qrs}}
 }
 
 func (d *Dialog) NewConnection(address string) (*grpc.ClientConn, error) {

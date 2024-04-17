@@ -28,6 +28,7 @@ func Run(configPath, envPath string) {
 	dial := dialog.NewDialog(cfg.Authority,
 		fmt.Sprintf("%v:%v", cfg.Users.Host, cfg.Users.Port),
 		fmt.Sprintf("%v:%v", cfg.Reservations.Host, cfg.Reservations.Port),
+		fmt.Sprintf("%v:%v", cfg.QRs.Host, cfg.QRs.Port),
 	)
 	tokenManager, err := auth.NewManager(cfg.JWT.SigningKey)
 	if err != nil {
@@ -35,12 +36,13 @@ func Run(configPath, envPath string) {
 		return
 	}
 	handlers := delivery.NewHandler(
-		delivery.Dependencies{
+		delivery.Handler{
 			AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
 			RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
 			Environment:     cfg.Environment,
 			Dialog:          dial,
 			TokenManager:    tokenManager,
+			HttpAddress:     cfg.HTTP.Host + ":" + cfg.HTTP.Port,
 		})
 
 	// HTTP Server

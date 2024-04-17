@@ -26,6 +26,7 @@ type (
 		GRPC         GRPCConfig         `mapstructure:"grpc"`
 		Users        MicroserviceConfig `mapstructure:"userMicroservice"`
 		Reservations MicroserviceConfig `mapstructure:"reservationMicroservice"`
+		QRs          MicroserviceConfig `mapstructure:"qrMicroservice"`
 		HTTP         HTTPConfig         `mapstructure:"http"`
 		JWT          JWTConfig          `mapstructure:"jwt"`
 	}
@@ -78,6 +79,9 @@ func unmarshal(cfg *Config) error {
 		return err
 	}
 	if err := viper.UnmarshalKey("reservationMicroservice", &cfg.Reservations); err != nil {
+		return err
+	}
+	if err := viper.UnmarshalKey("qrMicroservice", &cfg.QRs); err != nil {
 		return err
 	}
 	if err := viper.UnmarshalKey("jwt", &cfg.JWT); err != nil {

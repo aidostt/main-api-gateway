@@ -8,6 +8,13 @@ type userSignUpInput struct {
 	Password string `json:"password" binding:"required,min=8,max=64"`
 }
 
+type reservationRegisterInput struct {
+	Name    string `json:"restaurant_name" binding:"required,min=8,max=64"`
+	Address string `json:"restaurant_address" binding:"required,min=8,max=64"`
+	TableID int32  `json:"table_id" binding:"required,max=64"`
+	Time    string `json:"reservation_time" binding:"required,min=8,max=64"`
+}
+
 type signInInput struct {
 	Email    string `json:"email" binding:"required,email,max=64"`
 	Password string `json:"password" binding:"required,min=8,max=64"`
@@ -24,4 +31,13 @@ type tokenResponse struct {
 
 type healthResponse struct {
 	Status string `json:"status"`
+}
+
+type qrInput struct {
+	ReservationID string `json:"reservation_id"`
+}
+
+type scanResponse struct {
+	user        userSignUpInput
+	reservation reservationRegisterInput
 }

@@ -63,7 +63,7 @@ func (h *Handler) parseAuthHeader(c *gin.Context) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	id, err := h.tokenManager.Parse(token)
+	id, err := h.TokenManager.Parse(token)
 	if err != nil {
 		if err.Error() == "token is expired" {
 		} else {

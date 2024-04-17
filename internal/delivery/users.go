@@ -30,7 +30,7 @@ func (h *Handler) userSignUp(c *gin.Context) {
 
 		return
 	}
-	conn, err := h.dialog.NewConnection(h.dialog.Addresses.Users)
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
 	defer conn.Close()
 	if err != nil {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
@@ -64,8 +64,8 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.accessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.refreshTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
 	c.JSON(http.StatusOK, tokenResponse{
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,
@@ -79,7 +79,7 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		newResponse(c, http.StatusBadRequest, "invalid input body")
 		return
 	}
-	conn, err := h.dialog.NewConnection(h.dialog.Addresses.Users)
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
 	defer conn.Close()
 	if err != nil {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
@@ -110,8 +110,8 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.accessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.refreshTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
 	c.JSON(http.StatusOK, tokenResponse{
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,

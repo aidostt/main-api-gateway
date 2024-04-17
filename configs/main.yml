@@ -21,4 +21,10 @@ userMicroservice:
 
 reservationMicroservice:
   host: localhost
-  port: 606
+  port: 6060
+
+
+qrMicroservice:
+  host: localhost
+  port: 7070
+
