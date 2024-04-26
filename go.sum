@@ -1,5 +1,11 @@
 github.com/aidostt/protos v0.2.5 h1:yriDGcA1uqsBsXa7oO8+DGa/FyGFWlMlV5Tif6aTt+0=
 github.com/aidostt/protos v0.2.5/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
+github.com/aidostt/protos v0.3.7 h1:pUa2GRxbaqIyWt20WtyzG7p5knvUTNlObyRSO8kFNBs=
+github.com/aidostt/protos v0.3.7/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
+github.com/aidostt/protos v0.3.8 h1:BJnVWcOSL/4CTO3gShGytl10hagcrwlSAWF0ErY9WCU=
+github.com/aidostt/protos v0.3.8/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
+github.com/aidostt/protos v0.4.0 h1:HWdrMchWB/bwJZsaVLeSB7K8/Vbmsc5OSk4aBFEnOik=
+github.com/aidostt/protos v0.4.0/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=
 github.com/bytedance/sonic v1.9.1 h1:6iJ6NqdoxCDr6mbY8h18oSO+cShGSMRGCEo7F2h0x8s=
 github.com/bytedance/sonic v1.9.1/go.mod h1:i736AoUSYt75HyZLoJW9ERYxcy6eaN6h4BZXU064P/U=

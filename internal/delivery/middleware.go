@@ -83,6 +83,7 @@ func corsMiddleware(c *gin.Context) {
 	if c.Request.Method != "OPTIONS" {
 		c.Next()
 	} else {
+		//TODO: solve problem with CORS policy
 		c.AbortWithStatus(http.StatusOK)
 	}
 }

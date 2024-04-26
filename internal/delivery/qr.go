@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func (h *Handler) initQRRoutes(api *gin.RouterGroup) {
+func (h *Handler) qr(api *gin.RouterGroup) {
 	qr := api.Group("/qr")
 	{
 		authenticated := qr.Group("/", h.userIdentity)
@@ -35,7 +35,6 @@ func (h *Handler) generateQR(c *gin.Context) {
 	}
 	//TODO: validate qr content
 	qr := proto_qr.NewQRClient(conn)
-	//TODO: retrieve reservation id (from context or input body)
 	resp, err := qr.Generate(c.Request.Context(), &proto_qr.GenerateRequest{
 		Content: "http://" + h.HttpAddress + "/api/qr/scan/" + inp.ReservationID,
 	})
@@ -43,7 +42,7 @@ func (h *Handler) generateQR(c *gin.Context) {
 		st, ok := status.FromError(err)
 		if !ok {
 			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling generate qr:"+err.Error())
 			return
 		}
 		switch st.Code() {
@@ -52,7 +51,7 @@ func (h *Handler) generateQR(c *gin.Context) {
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling generate qr:"+err.Error())
 		}
 		return
 	}
@@ -63,7 +62,7 @@ func (h *Handler) generateQR(c *gin.Context) {
 func (h *Handler) scanQR(c *gin.Context) {
 	reservationID := c.Param("id")
 	if reservationID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "missing ID in the URL"})
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.QRs)
@@ -87,7 +86,7 @@ func (h *Handler) scanQR(c *gin.Context) {
 		st, ok := status.FromError(err)
 		if !ok {
 			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling scan qr:"+err.Error())
 			return
 		}
 		switch st.Code() {
@@ -95,8 +94,10 @@ func (h *Handler) scanQR(c *gin.Context) {
 			newResponse(c, http.StatusBadRequest, "invalid argument")
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		case codes.Unauthenticated:
+			newResponse(c, http.StatusInternalServerError, "unauthorized access")
 		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling scan qr:"+err.Error())
 		}
 		return
 	}

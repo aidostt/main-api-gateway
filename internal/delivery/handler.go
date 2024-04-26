@@ -44,8 +44,9 @@ func (h *Handler) Init() *gin.Engine {
 	api := router.Group("/api")
 	{
 
-		h.initUsersRoutes(api)
-		h.initQRRoutes(api)
+		h.auth(api)
+		h.qr(api)
+		h.user(api)
 	}
 
 	return router

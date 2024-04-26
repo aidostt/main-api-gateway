@@ -41,3 +41,8 @@ type scanResponse struct {
 	user        userSignUpInput
 	reservation reservationRegisterInput
 }
+
+type getUserInput struct {
+	Id    string `json:"id"`
+	Email string `json:"email"`
+}

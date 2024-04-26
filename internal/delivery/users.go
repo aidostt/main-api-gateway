@@ -1,33 +1,36 @@
 package delivery
 
 import (
-	"github.com/aidostt/protos/gen/go/reservista/authentication"
+	proto_user "github.com/aidostt/protos/gen/go/reservista/user"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
-	"time"
+	"reservista.kz/internal/domain"
 )
 
-func (h *Handler) initUsersRoutes(api *gin.RouterGroup) {
+func (h *Handler) user(api *gin.RouterGroup) {
 	users := api.Group("/users")
 	{
-		users.POST("/sign-up", h.userSignUp)
-		users.POST("/sign-in", h.userSignIn)
 		authenticated := users.Group("/", h.userIdentity)
 		authenticated.Use(h.isExpired)
 		{
-			authenticated.GET("/healthcheck", h.healthcheck)
-			authenticated.POST("/sign-out", h.signOut)
+			authenticated.POST("/get-by-id", h.getByID)
+			authenticated.POST("/get-by-email", h.getByEmail)
+			authenticated.POST("/delete", h.deleteUser)
+			authenticated.POST("/update", h.updateUser)
 		}
 	}
 }
 
-func (h *Handler) userSignUp(c *gin.Context) {
+func (h *Handler) isAdmin(c *gin.Context) {
+	//TODO: implement
+}
+
+func (h *Handler) updateUser(c *gin.Context) {
 	var inp userSignUpInput
 	if err := c.BindJSON(&inp); err != nil {
 		newResponse(c, http.StatusBadRequest, "invalid input body")
-
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
@@ -36,57 +39,17 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
 		return
 	}
-	auth := proto_auth.NewAuthClient(conn)
-
-	tokens, err := auth.SignUp(c.Request.Context(), &proto_auth.RegisterRequest{
+	client := proto_user.NewUserClient(conn)
+	userID, ok := c.Get(userCtx)
+	if !ok {
+		newResponse(c, http.StatusBadRequest, "unauthorized access")
+		return
+	}
+	statusResponse, err := client.Update(c.Request.Context(), &proto_user.UpdateRequest{
+		Id:       userID.(string),
 		Name:     inp.Name,
 		Surname:  inp.Surname,
 		Phone:    inp.Phone,
-		Email:    inp.Email,
-		Password: inp.Password,
-	})
-
-	if err != nil {
-		st, ok := status.FromError(err)
-		if !ok {
-			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
-			return
-		}
-		switch st.Code() {
-		case codes.AlreadyExists:
-			newResponse(c, http.StatusBadRequest, "user already exists")
-		case codes.Internal:
-			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
-		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
-		}
-		return
-	}
-
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
-		AccessToken:  tokens.Jwt,
-		RefreshToken: tokens.Rt,
-	})
-	c.Status(http.StatusCreated)
-}
-
-func (h *Handler) userSignIn(c *gin.Context) {
-	var inp signInInput
-	if err := c.BindJSON(&inp); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
-		return
-	}
-	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
-	defer conn.Close()
-	if err != nil {
-		newResponse(c, http.StatusInternalServerError, "something went wrong...")
-		return
-	}
-	auth := proto_auth.NewAuthClient(conn)
-	tokens, err := auth.SignIn(c.Request.Context(), &proto_auth.SignInRequest{
 		Email:    inp.Email,
 		Password: inp.Password,
 	})
@@ -99,9 +62,94 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		}
 		switch st.Code() {
 		case codes.InvalidArgument:
-			newResponse(c, http.StatusBadRequest, "wrong credentials")
-		case codes.NotFound:
-			newResponse(c, http.StatusBadRequest, "user not found")
+			newResponse(c, http.StatusBadRequest, "invalid argument")
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
+		return
+	}
+	if !statusResponse.Status {
+		newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) deleteUser(c *gin.Context) {
+	var inp getUserInput
+	if err := c.BindJSON(&inp); err != nil {
+		newResponse(c, http.StatusBadRequest, "invalid input body")
+		return
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_user.NewUserClient(conn)
+	userID, ok := c.Get(userCtx)
+	if !ok {
+		newResponse(c, http.StatusBadRequest, "unauthorized access")
+		return
+	}
+	statusResponse, err := client.Delete(c.Request.Context(), &proto_user.GetRequest{
+		UserId: userID.(string),
+		Email:  inp.Email,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument")
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
+		return
+	}
+	if !statusResponse.Status {
+		newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) getByID(c *gin.Context) {
+	var inp getUserInput
+	if err := c.BindJSON(&inp); err != nil {
+		newResponse(c, http.StatusBadRequest, "invalid input body")
+		return
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_user.NewUserClient(conn)
+	user, err := client.GetByID(c.Request.Context(), &proto_user.GetRequest{
+		UserId: inp.Id,
+		Email:  domain.Plug,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		default:
@@ -110,18 +158,53 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
-		AccessToken:  tokens.Jwt,
-		RefreshToken: tokens.Rt,
+	c.JSON(http.StatusOK, userSignUpInput{
+		Name:    user.GetName(),
+		Surname: user.GetSurname(),
+		Phone:   user.GetPhone(),
+		Email:   user.GetEmail(),
 	})
 }
 
-func (h *Handler) signOut(c *gin.Context) {
-	c.SetCookie("jwt", "", -1, "/", "", false, true)
-	c.SetCookie("RT", "", -1, "/", "", false, true)
-	c.JSON(http.StatusOK, healthResponse{
-		Status: "success",
+func (h *Handler) getByEmail(c *gin.Context) {
+	var inp getUserInput
+	if err := c.BindJSON(&inp); err != nil {
+		newResponse(c, http.StatusBadRequest, "invalid input body")
+		return
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_user.NewUserClient(conn)
+	user, err := client.GetByEmail(c.Request.Context(), &proto_user.GetRequest{
+		UserId: domain.Plug,
+		Email:  inp.Email,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, userSignUpInput{
+		Name:    user.GetName(),
+		Surname: user.GetSurname(),
+		Phone:   user.GetPhone(),
+		Email:   user.GetEmail(),
 	})
 }
