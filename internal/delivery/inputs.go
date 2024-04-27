@@ -26,7 +26,7 @@ type tableInput struct {
 	NumberOfSeats int32  `json:"number_of_seats"`
 	IsReserved    bool   `json:"is_reserved"`
 	TableNumber   int32  `json:"table_number"`
-	//Restaurant    *restaurantInput `json:"restaurant"`
+	RestaurantID  string `json:"restaurant_id"`
 }
 
 type signInInput struct {

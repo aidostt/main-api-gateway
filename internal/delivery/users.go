@@ -15,10 +15,10 @@ func (h *Handler) user(api *gin.RouterGroup) {
 		authenticated := users.Group("/", h.userIdentity)
 		authenticated.Use(h.isExpired)
 		{
-			authenticated.POST("/get-by-id", h.getByID)
-			authenticated.POST("/get-by-email", h.getByEmail)
-			authenticated.POST("/delete", h.deleteUser)
-			authenticated.POST("/update", h.updateUser)
+			authenticated.GET("/get-by-id", h.getByID)
+			authenticated.GET("/get-by-email", h.getByEmail)
+			authenticated.DELETE("/delete", h.deleteUser)
+			authenticated.PATCH("/update", h.updateUser)
 		}
 	}
 }
