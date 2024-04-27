@@ -27,7 +27,6 @@ func (h *Handler) userSignUp(c *gin.Context) {
 	var inp userSignUpInput
 	if err := c.BindJSON(&inp); err != nil {
 		newResponse(c, http.StatusBadRequest, "invalid input body")
-
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
@@ -36,9 +35,9 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
 		return
 	}
-	auth := proto_auth.NewAuthClient(conn)
+	client := proto_auth.NewAuthClient(conn)
 
-	tokens, err := auth.SignUp(c.Request.Context(), &proto_auth.RegisterRequest{
+	tokens, err := client.SignUp(c.Request.Context(), &proto_auth.RegisterRequest{
 		Name:     inp.Name,
 		Surname:  inp.Surname,
 		Phone:    inp.Phone,
@@ -85,8 +84,8 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
 		return
 	}
-	auth := proto_auth.NewAuthClient(conn)
-	tokens, err := auth.SignIn(c.Request.Context(), &proto_auth.SignInRequest{
+	client := proto_auth.NewAuthClient(conn)
+	tokens, err := client.SignIn(c.Request.Context(), &proto_auth.SignInRequest{
 		Email:    inp.Email,
 		Password: inp.Password,
 	})
