@@ -15,6 +15,20 @@ type restaurantInput struct {
 	Contact string `json:"restaurant_contact" binding:"required,max=64"`
 }
 
+type reservationInput struct {
+	UserID          string `json:"userId"`
+	TableID         string `json:"tableId"`
+	ReservationTime string `json:"reservationTime"`
+}
+
+type tableInput struct {
+	Id            string `json:"id"`
+	NumberOfSeats int32  `json:"number_of_seats"`
+	IsReserved    bool   `json:"is_reserved"`
+	TableNumber   int32  `json:"table_number"`
+	//Restaurant    *restaurantInput `json:"restaurant"`
+}
+
 type signInInput struct {
 	Email    string `json:"email" binding:"required,email,max=64"`
 	Password string `json:"password" binding:"required,min=8,max=64"`

@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func (h *Handler) restaurants(api *gin.RouterGroup) {
+func (h *Handler) restaurant(api *gin.RouterGroup) {
 	restaurants := api.Group("/restaurants")
 	{
 		restaurants.GET("/view", h.getRestaurant)

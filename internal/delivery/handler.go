@@ -48,6 +48,7 @@ func (h *Handler) Init() *gin.Engine {
 		h.qr(api)
 		h.user(api)
 		h.restaurant(api)
+		h.reservation(api)
 	}
 
 	return router
