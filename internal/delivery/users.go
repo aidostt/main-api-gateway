@@ -12,13 +12,13 @@ import (
 func (h *Handler) user(api *gin.RouterGroup) {
 	users := api.Group("/users")
 	{
+		users.GET("/get-by-id", h.getByID)
+		users.GET("/get-by-email", h.getByEmail)
+		users.DELETE("/delete", h.deleteUser)
+		users.PATCH("/update", h.updateUser)
 		authenticated := users.Group("/", h.userIdentity)
 		authenticated.Use(h.isExpired)
 		{
-			authenticated.GET("/get-by-id", h.getByID)
-			authenticated.GET("/get-by-email", h.getByEmail)
-			authenticated.DELETE("/delete", h.deleteUser)
-			authenticated.PATCH("/update", h.updateUser)
 		}
 	}
 }

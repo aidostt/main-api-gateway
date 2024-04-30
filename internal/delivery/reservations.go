@@ -101,7 +101,7 @@ func (h *Handler) getReservation(c *gin.Context) {
 }
 
 func (h *Handler) updateReservation(c *gin.Context) {
-	var input reservationInput
+	var input reservationUpdateInput
 	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		c.Abort()
@@ -117,7 +117,7 @@ func (h *Handler) updateReservation(c *gin.Context) {
 	client := proto_reservation.NewReservationClient(conn)
 
 	statusResponse, err := client.UpdateReservation(c.Request.Context(), &proto_reservation.ReservationSQLRequest{
-		UserID:          input.UserID,
+		UserID:          input.ReservationID,
 		TableID:         input.TableID,
 		ReservationTime: input.ReservationTime,
 	})

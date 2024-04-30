@@ -16,9 +16,15 @@ type restaurantInput struct {
 }
 
 type reservationInput struct {
-	UserID          string `json:"userId"`
-	TableID         string `json:"tableId"`
-	ReservationTime string `json:"reservationTime"`
+	UserID          string `json:"user_id"`
+	TableID         string `json:"table_id"`
+	ReservationTime string `json:"reservation_time"`
+}
+
+type reservationUpdateInput struct {
+	ReservationID   string `json:"reservation_id"`
+	TableID         string `json:"table_id"`
+	ReservationTime string `json:"reservation_time"`
 }
 
 type tableInput struct {
