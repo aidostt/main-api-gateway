@@ -11,11 +11,11 @@ import (
 func (h *Handler) restaurant(api *gin.RouterGroup) {
 	restaurants := api.Group("/restaurants")
 	{
-		restaurants.GET("/view", h.getRestaurant)
+		restaurants.GET("/view/:id", h.getRestaurant)
 		restaurants.GET("/all", h.getAllRestaurants)
 		restaurants.POST("/add", h.addRestaurant)
-		restaurants.DELETE("/delete", h.deleteRestaurantById)
-		restaurants.PATCH("/update", h.updateRestById)
+		restaurants.DELETE("/delete/:id", h.deleteRestaurantById)
+		restaurants.PATCH("/update/:id", h.updateRestById)
 	}
 }
 
@@ -48,9 +48,9 @@ func (h *Handler) getAllRestaurants(c *gin.Context) {
 }
 
 func (h *Handler) getRestaurant(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -61,7 +61,7 @@ func (h *Handler) getRestaurant(c *gin.Context) {
 	}
 	client := proto_restaurant.NewRestaurantClient(conn)
 
-	restaurant, err := client.GetRestaurant(c.Request.Context(), &proto_restaurant.IDRequest{Id: input.Id})
+	restaurant, err := client.GetRestaurant(c.Request.Context(), &proto_restaurant.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -133,6 +133,11 @@ func (h *Handler) addRestaurant(c *gin.Context) {
 }
 
 func (h *Handler) updateRestById(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
 	var input restaurantInput
 	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -148,7 +153,7 @@ func (h *Handler) updateRestById(c *gin.Context) {
 	client := proto_restaurant.NewRestaurantClient(conn)
 
 	statusResponse, err := client.UpdateRestById(c.Request.Context(), &proto_restaurant.RestaurantObject{
-		Id:      input.Id,
+		Id:      id,
 		Name:    input.Name,
 		Address: input.Address,
 		Contact: input.Contact,
@@ -179,10 +184,9 @@ func (h *Handler) updateRestById(c *gin.Context) {
 }
 
 func (h *Handler) deleteRestaurantById(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		c.Abort()
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -194,7 +198,7 @@ func (h *Handler) deleteRestaurantById(c *gin.Context) {
 	client := proto_restaurant.NewRestaurantClient(conn)
 
 	statusResponse, err := client.DeleteRestaurantById(c.Request.Context(), &proto_restaurant.IDRequest{
-		Id: input.Id,
+		Id: id,
 	})
 	if err != nil {
 		st, ok := status.FromError(err)

@@ -12,8 +12,8 @@ import (
 func (h *Handler) user(api *gin.RouterGroup) {
 	users := api.Group("/users")
 	{
-		users.GET("/get-by-id", h.getByID)
-		users.GET("/get-by-email", h.getByEmail)
+		users.GET("/view/id/:id", h.getByID)
+		users.GET("/view/email/:email", h.getByEmail)
 		users.DELETE("/delete", h.deleteUser)
 		users.PATCH("/update", h.updateUser)
 		authenticated := users.Group("/", h.userIdentity)
@@ -124,9 +124,9 @@ func (h *Handler) deleteUser(c *gin.Context) {
 }
 
 func (h *Handler) getByID(c *gin.Context) {
-	var inp getUserInput
-	if err := c.BindJSON(&inp); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
@@ -137,7 +137,7 @@ func (h *Handler) getByID(c *gin.Context) {
 	}
 	client := proto_user.NewUserClient(conn)
 	user, err := client.GetByID(c.Request.Context(), &proto_user.GetRequest{
-		UserId: inp.Id,
+		UserId: id,
 		Email:  domain.Plug,
 	})
 	if err != nil {
@@ -167,9 +167,9 @@ func (h *Handler) getByID(c *gin.Context) {
 }
 
 func (h *Handler) getByEmail(c *gin.Context) {
-	var inp getUserInput
-	if err := c.BindJSON(&inp); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	email := c.Param("email")
+	if email == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
@@ -181,7 +181,7 @@ func (h *Handler) getByEmail(c *gin.Context) {
 	client := proto_user.NewUserClient(conn)
 	user, err := client.GetByEmail(c.Request.Context(), &proto_user.GetRequest{
 		UserId: domain.Plug,
-		Email:  inp.Email,
+		Email:  email,
 	})
 	if err != nil {
 		st, ok := status.FromError(err)

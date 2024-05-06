@@ -11,20 +11,20 @@ import (
 func (h *Handler) table(api *gin.RouterGroup) {
 	tables := api.Group("tables")
 	{
-		tables.GET("/view", h.getTable)
-		tables.GET("/all/restaurant", h.getTablesByRestId)
+		tables.GET("/view/:id", h.getTable)
+		tables.GET("/all/restaurant/:id", h.getTablesByRestId)
 		tables.POST("/add", h.addTable)
-		tables.DELETE("/delete", h.deleteTableById)
-		tables.GET("/all/restaurant/available", h.getAvailableTables)
-		tables.GET("/all/restaurant/reserved", h.getReservedTables)
-		tables.PATCH("/update", h.updateTableById)
+		tables.DELETE("/delete/:id", h.deleteTableById)
+		tables.GET("/all/restaurant/available/:id", h.getAvailableTables)
+		tables.GET("/all/restaurant/reserved/:id", h.getReservedTables)
+		tables.PATCH("/update/:id", h.updateTableById)
 	}
 }
 
 func (h *Handler) getTable(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 
@@ -36,7 +36,7 @@ func (h *Handler) getTable(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	table, err := client.GetTable(c.Request.Context(), &proto_table.IDRequest{Id: input.Id})
+	table, err := client.GetTable(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -57,9 +57,9 @@ func (h *Handler) getTable(c *gin.Context) {
 }
 
 func (h *Handler) getTablesByRestId(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -70,7 +70,7 @@ func (h *Handler) getTablesByRestId(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	tables, err := client.GetTablesByRestId(c.Request.Context(), &proto_table.IDRequest{Id: input.Id})
+	tables, err := client.GetTablesByRestId(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -137,9 +137,9 @@ func (h *Handler) addTable(c *gin.Context) {
 }
 
 func (h *Handler) deleteTableById(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *Handler) deleteTableById(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	table, err := client.DeleteTableById(c.Request.Context(), &proto_table.IDRequest{Id: input.Id})
+	table, err := client.DeleteTableById(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -172,9 +172,9 @@ func (h *Handler) deleteTableById(c *gin.Context) {
 }
 
 func (h *Handler) getAvailableTables(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *Handler) getAvailableTables(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	table, err := client.GetAvailableTables(c.Request.Context(), &proto_table.IDRequest{Id: input.Id})
+	table, err := client.GetAvailableTables(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -207,9 +207,9 @@ func (h *Handler) getAvailableTables(c *gin.Context) {
 }
 
 func (h *Handler) getReservedTables(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 
@@ -221,7 +221,7 @@ func (h *Handler) getReservedTables(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	table, err := client.GetReservedTables(c.Request.Context(), &proto_table.IDRequest{Id: input.Id})
+	table, err := client.GetReservedTables(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -242,6 +242,11 @@ func (h *Handler) getReservedTables(c *gin.Context) {
 }
 
 func (h *Handler) updateTableById(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
 	var input tableInput
 	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -258,7 +263,7 @@ func (h *Handler) updateTableById(c *gin.Context) {
 	client := proto_table.NewTableClient(conn)
 
 	statusResponse, err := client.UpdateTableById(c.Request.Context(), &proto_table.UpdateTableRequest{
-		Id:            input.Id,
+		Id:            id,
 		NumberOfSeats: input.NumberOfSeats,
 		IsReserved:    input.IsReserved,
 		TableNumber:   input.TableNumber,

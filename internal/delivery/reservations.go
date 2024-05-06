@@ -12,12 +12,12 @@ func (h *Handler) reservation(api *gin.RouterGroup) {
 	reservations := api.Group("/reservations")
 	{
 		reservations.POST("/make", h.makeReservation)
-		reservations.GET("/view", h.getReservation)
+		reservations.GET("/view/:id", h.getReservation)
 		reservations.PATCH("/update", h.updateReservation)
-		reservations.DELETE("/cancel", h.deleteReservationById)
+		reservations.DELETE("/cancel/:id", h.deleteReservationById)
 		reservations.GET("/all", h.getAllReservationsByUserId)
-		reservations.GET("/view/restaurant", h.getRestaurantByReservationId)
-		reservations.GET("/view/table", h.getTableByReservationId)
+		reservations.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
+		reservations.GET("/view/table/:id", h.getTableByReservationId)
 	}
 }
 
@@ -66,9 +66,9 @@ func (h *Handler) makeReservation(c *gin.Context) {
 }
 
 func (h *Handler) getReservation(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -79,7 +79,7 @@ func (h *Handler) getReservation(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	reservation, err := client.GetReservation(c.Request.Context(), &proto_reservation.IDRequest{Id: input.Id})
+	reservation, err := client.GetReservation(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -145,9 +145,9 @@ func (h *Handler) updateReservation(c *gin.Context) {
 }
 
 func (h *Handler) deleteReservationById(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -158,7 +158,7 @@ func (h *Handler) deleteReservationById(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	reservation, err := client.DeleteReservationById(c.Request.Context(), &proto_reservation.IDRequest{Id: input.Id})
+	reservation, err := client.DeleteReservationById(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -180,9 +180,9 @@ func (h *Handler) deleteReservationById(c *gin.Context) {
 }
 
 func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	userID, ok := c.Get(userCtx)
+	if !ok {
+		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -193,7 +193,7 @@ func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	reservation, err := client.GetAllReservationByUserId(c.Request.Context(), &proto_reservation.IDRequest{Id: input.Id})
+	reservation, err := client.GetAllReservationByUserId(c.Request.Context(), &proto_reservation.IDRequest{Id: userID.(string)})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -215,9 +215,9 @@ func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
 }
 
 func (h *Handler) getRestaurantByReservationId(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -228,7 +228,7 @@ func (h *Handler) getRestaurantByReservationId(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	restaurant, err := client.GetRestaurantByReservationId(c.Request.Context(), &proto_reservation.IDRequest{Id: input.Id})
+	restaurant, err := client.GetRestaurantByReservationId(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -255,9 +255,9 @@ func (h *Handler) getRestaurantByReservationId(c *gin.Context) {
 }
 
 func (h *Handler) getTableByReservationId(c *gin.Context) {
-	var input idInput
-	if err := c.BindJSON(&input); err != nil {
-		newResponse(c, http.StatusBadRequest, "invalid input body")
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return
 	}
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
@@ -268,7 +268,7 @@ func (h *Handler) getTableByReservationId(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	table, err := client.GetTableByReservationId(c.Request.Context(), &proto_reservation.IDRequest{Id: input.Id})
+	table, err := client.GetTableByReservationId(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
