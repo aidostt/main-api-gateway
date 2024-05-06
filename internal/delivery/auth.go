@@ -63,13 +63,10 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
+	h.setCookies(c, tokenResponse{
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,
 	})
-	c.Status(http.StatusCreated)
 }
 
 func (h *Handler) userSignIn(c *gin.Context) {
@@ -109,9 +106,7 @@ func (h *Handler) userSignIn(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
+	h.setCookies(c, tokenResponse{
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,
 	})
@@ -123,4 +118,10 @@ func (h *Handler) signOut(c *gin.Context) {
 	c.JSON(http.StatusOK, healthResponse{
 		Status: "success",
 	})
+}
+
+func (h *Handler) setCookies(c *gin.Context, tokens tokenResponse) {
+	c.SetCookie("jwt", tokens.AccessToken, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("RT", tokens.RefreshToken, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
+	c.JSON(http.StatusOK, tokens)
 }

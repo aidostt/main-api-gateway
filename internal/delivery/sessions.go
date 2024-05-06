@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) refresh(c *gin.Context) {
@@ -60,9 +59,7 @@ func (h *Handler) refresh(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("jwt", tokens.Jwt, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.Rt, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
-	c.JSON(http.StatusOK, tokenResponse{
+	h.setCookies(c, tokenResponse{
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,
 	})
