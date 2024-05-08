@@ -6,7 +6,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) auth(api *gin.RouterGroup) {
@@ -121,7 +120,7 @@ func (h *Handler) signOut(c *gin.Context) {
 }
 
 func (h *Handler) setCookies(c *gin.Context, tokens tokenResponse) {
-	c.SetCookie("jwt", tokens.AccessToken, time.Now().Add(h.AccessTokenTTL).Second(), "/", "", false, true)
-	c.SetCookie("RT", tokens.RefreshToken, time.Now().Add(h.RefreshTokenTTL).Second(), "/", "", false, true)
+	c.SetCookie("jwt", tokens.AccessToken, int(h.AccessTokenTTL.Seconds()), "/", "", false, true)
+	c.SetCookie("RT", tokens.RefreshToken, int(h.RefreshTokenTTL.Seconds()), "/", "", false, true)
 	c.JSON(http.StatusOK, tokens)
 }
