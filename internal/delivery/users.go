@@ -16,10 +16,6 @@ func (h *Handler) user(api *gin.RouterGroup) {
 		users.GET("/view/email/:email", h.getByEmail)
 		users.DELETE("/delete", h.deleteUser)
 		users.PATCH("/update", h.updateUser)
-		authenticated := users.Group("/", h.userIdentity)
-		authenticated.Use(h.isExpired)
-		{
-		}
 	}
 }
 
@@ -40,7 +36,7 @@ func (h *Handler) updateUser(c *gin.Context) {
 		return
 	}
 	client := proto_user.NewUserClient(conn)
-	userID, ok := c.Get(userCtx)
+	userID, ok := c.Get(idCtx)
 	if !ok {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return
@@ -90,7 +86,7 @@ func (h *Handler) deleteUser(c *gin.Context) {
 		return
 	}
 	client := proto_user.NewUserClient(conn)
-	userID, ok := c.Get(userCtx)
+	userID, ok := c.Get(idCtx)
 	if !ok {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return

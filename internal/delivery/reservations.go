@@ -180,7 +180,7 @@ func (h *Handler) deleteReservationById(c *gin.Context) {
 }
 
 func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
-	userID, ok := c.Get(userCtx)
+	userID, ok := c.Get(idCtx)
 	if !ok {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return

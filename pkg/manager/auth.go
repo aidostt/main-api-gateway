@@ -1,4 +1,4 @@
-package auth
+package authManager
 
 import (
 	"errors"
@@ -11,12 +11,20 @@ import (
 
 // TokenManager provides logic for JWT & Refresh tokens generation and parsing.
 type TokenManager interface {
-	Parse(accessToken string) (string, error)
+	NewAccessToken(string, time.Duration, []string, string) (string, error)
+	Parse(accessToken string) (string, []string, error)
+	NewRefreshToken() (string, error)
 	HexToObjectID(string) (primitive.ObjectID, error)
 }
 
 type Manager struct {
 	signingKey string
+}
+
+type CustomClaims struct {
+	UserID string   `json:"user_id"`
+	Roles  []string `json:"roles"`
+	jwt.StandardClaims
 }
 
 func NewManager(signingKey string) (*Manager, error) {
@@ -27,31 +35,46 @@ func NewManager(signingKey string) (*Manager, error) {
 	return &Manager{signingKey: signingKey}, nil
 }
 
-// Parse taking from the payload of JWT user id and returns it in string format. id is still returned
+func (m *Manager) NewAccessToken(userID string, ttl time.Duration, roles []string, issuer string) (string, error) {
+	claims := CustomClaims{
+		UserID: userID,
+		Roles:  roles,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(ttl).Unix(), // Token expires in 24 hours
+			Issuer:    issuer,
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString([]byte(m.signingKey))
+}
+
+// Parse taking from the payload of JWT user id and returns it in string format. Token is still returned
 // in both cases, if it is expired or not.
-func (m *Manager) Parse(accessToken string) (string, error) {
-	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (i interface{}, err error) {
+func (m *Manager) Parse(accessToken string) (string, []string, error) {
+	token, err := jwt.ParseWithClaims(accessToken, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-
 		return []byte(m.signingKey), nil
 	})
+
 	if err != nil {
 		var validationError *jwt.ValidationError
 		if errors.As(err, &validationError) && validationError.Errors&jwt.ValidationErrorExpired != 0 {
 			err = errors.New("token is expired")
 		} else {
-			return "", err
+			return "", nil, err
 		}
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(*CustomClaims)
 	if !ok {
-		return "", fmt.Errorf("error get user claims from token")
+		return "", nil, fmt.Errorf("error getting user claims from token")
 	}
 
-	return claims["sub"].(string), err
+	return claims.UserID, claims.Roles, nil
 }
 
 func (m *Manager) NewRefreshToken() (string, error) {

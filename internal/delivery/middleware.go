@@ -3,75 +3,79 @@ package delivery
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 const (
 	authorizationHeader = "Authorization"
 
-	userCtx = "userId"
+	idCtx   = "userId"
+	roleCtx = "userRoles"
 )
 
 func (h *Handler) userIdentity(c *gin.Context) {
-	id, _, err := h.parseAuthHeader(c)
+	id, roles, err := h.parseAuthHeader(c)
 	if err != nil {
 		switch err.Error() {
-		case http.ErrNoCookie.Error():
+		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
 			newResponse(c, http.StatusUnauthorized, "unauthorized access")
-		case "unauthorized access", "token has xxx elements":
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			return
 		default:
 			newResponse(c, http.StatusInternalServerError, "failed to parse jwt to id")
+			return
 		}
-		return
 
 	}
-	c.Set(userCtx, id)
+	c.Set(idCtx, id)
+	c.Set(roleCtx, roles)
+	c.Next()
 }
 func (h *Handler) isExpired(c *gin.Context) {
-	idCtx, exist := c.Get(userCtx)
-	if !exist {
-		newResponse(c, http.StatusUnauthorized, "unauthorized access")
-		return
-	}
-	idJWT, expired, err := h.parseAuthHeader(c)
+	_, _, err := h.parseAuthHeader(c)
 	if err != nil {
 		switch err.Error() {
-		case http.ErrNoCookie.Error():
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
-		case "unauthorized access", "token has xxx elements":
+		case domain.ErrTokenExpired.Error():
+			h.refresh(c)
+			c.Next()
+		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
 			newResponse(c, http.StatusUnauthorized, "unauthorized access")
 		default:
 			newResponse(c, http.StatusInternalServerError, "failed to parse jwt to id")
 		}
 		return
-
 	}
-	if idJWT != idCtx {
-		newResponse(c, http.StatusUnauthorized, "unauthorized access")
-		return
-	}
-	if !expired {
-		c.Next()
-		return
-	}
-	h.refresh(c)
+	c.Next()
 }
 
-func (h *Handler) parseAuthHeader(c *gin.Context) (string, bool, error) {
-	var expired bool
+func (h *Handler) parseAuthHeader(c *gin.Context) (string, []string, error) {
 	token, err := c.Cookie("jwt")
 	if err != nil {
-		return "", false, err
+		return "", nil, err
 	}
-	id, err := h.TokenManager.Parse(token)
+	id, roles, err := h.TokenManager.Parse(token)
 	if err != nil {
-		if err.Error() == "token is expired" {
-		} else {
-			return "", false, err
-		}
+		return "", nil, err
 	}
+	return id, roles, nil
+}
 
-	return id, expired, nil
+func (h *Handler) isPermitted(requiredRole string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRoles, exists := c.Get(roleCtx)
+		if !exists {
+			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			return
+		}
+
+		for _, role := range userRoles.([]string) {
+			if role == requiredRole {
+				return // User has the required role, so we allow access
+			}
+		}
+
+		// If no required role is found in the user's roles
+		newResponse(c, http.StatusUnauthorized, "unauthorized access")
+	}
 }
 
 func corsMiddleware(c *gin.Context) {

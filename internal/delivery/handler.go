@@ -43,7 +43,6 @@ func (h *Handler) Init() *gin.Engine {
 
 	api := router.Group("/api")
 	{
-
 		h.auth(api)
 		h.qr(api)
 		h.user(api)

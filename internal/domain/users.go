@@ -8,6 +8,8 @@ type User struct {
 	Password string             `json:"password" bson:"password"`
 }
 
-var (
-	Plug = "plug"
+const (
+	UserRole  = "user"
+	AdminRole = "admin"
+	Plug      = "plug"
 )

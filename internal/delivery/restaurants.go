@@ -6,12 +6,17 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 func (h *Handler) restaurant(api *gin.RouterGroup) {
 	restaurants := api.Group("/restaurants")
 	{
-		restaurants.GET("/view/:id", h.getRestaurant)
+		//TODO: delete example
+		adminRoutes := restaurants.Group("/")
+		adminRoutes.Use(h.isPermitted(domain.AdminRole))
+		adminRoutes.GET("/view/:id", h.getRestaurant)
+
 		restaurants.GET("/all", h.getAllRestaurants)
 		restaurants.POST("/add", h.addRestaurant)
 		restaurants.DELETE("/delete/:id", h.deleteRestaurantById)

@@ -73,7 +73,7 @@ func (h *Handler) scanQR(c *gin.Context) {
 	}
 	qr := proto_qr.NewQRClient(conn)
 	//TODO: check whether user from context is admin/restaurant stuff
-	userID, ok := c.Get(userCtx)
+	userID, ok := c.Get(idCtx)
 	if !ok {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return
