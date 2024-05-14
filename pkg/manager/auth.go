@@ -40,7 +40,7 @@ func (m *Manager) NewAccessToken(userID string, ttl time.Duration, roles []strin
 		UserID: userID,
 		Roles:  roles,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(ttl).Unix(), // Token expires in 24 hours
+			ExpiresAt: time.Now().Add(ttl).Unix(),
 			Issuer:    issuer,
 		},
 	}
@@ -74,7 +74,7 @@ func (m *Manager) Parse(accessToken string) (string, []string, error) {
 		return "", nil, fmt.Errorf("error getting user claims from token")
 	}
 
-	return claims.UserID, claims.Roles, nil
+	return claims.UserID, claims.Roles, err
 }
 
 func (m *Manager) NewRefreshToken() (string, error) {

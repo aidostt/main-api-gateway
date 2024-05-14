@@ -5,9 +5,11 @@ http:
   writeTimeout: 10s
 
 auth:
-  accessTokenTTL: 15m
+  accessTokenTTL: 5s
   refreshTokenTTL: 12h
 
+cookie:
+  ttl: 12h
 
 grpc:
   port: 4040

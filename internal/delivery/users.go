@@ -19,7 +19,7 @@ func (h *Handler) user(api *gin.RouterGroup) {
 	}
 }
 
-func (h *Handler) isAdmin(c *gin.Context) {
+func (h *Handler) isAllowedRole(c *gin.Context) {
 	//TODO: implement
 }
 

@@ -37,12 +37,11 @@ func Run(configPath, envPath string) {
 	}
 	handlers := delivery.NewHandler(
 		delivery.Handler{
-			AccessTokenTTL:  cfg.JWT.AccessTokenTTL,
-			RefreshTokenTTL: cfg.JWT.RefreshTokenTTL,
-			Environment:     cfg.Environment,
-			Dialog:          dial,
-			TokenManager:    tokenManager,
-			HttpAddress:     cfg.HTTP.Host + ":" + cfg.HTTP.Port,
+			CookieTTL:    cfg.Cookie.Ttl,
+			Environment:  cfg.Environment,
+			Dialog:       dial,
+			TokenManager: tokenManager,
+			HttpAddress:  cfg.HTTP.Host + ":" + cfg.HTTP.Port,
 		})
 
 	// HTTP Server

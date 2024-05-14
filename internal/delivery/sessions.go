@@ -50,7 +50,7 @@ func (h *Handler) refresh(c *gin.Context) {
 		}
 		switch st.Code() {
 		case codes.Unauthenticated:
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: "+err.Error())
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		default:

@@ -14,7 +14,6 @@ func (h *Handler) auth(api *gin.RouterGroup) {
 		users.POST("/sign-up", h.userSignUp)
 		users.POST("/sign-in", h.userSignIn)
 		authenticated := users.Group("/", h.userIdentity)
-		authenticated.Use(h.isExpired)
 		{
 			authenticated.GET("/healthcheck", h.healthcheck)
 			authenticated.POST("/sign-out", h.signOut)
@@ -120,7 +119,7 @@ func (h *Handler) signOut(c *gin.Context) {
 }
 
 func (h *Handler) setCookies(c *gin.Context, tokens tokenResponse) {
-	c.SetCookie("jwt", tokens.AccessToken, int(h.AccessTokenTTL.Seconds()), "/", "", false, true)
-	c.SetCookie("RT", tokens.RefreshToken, int(h.RefreshTokenTTL.Seconds()), "/", "", false, true)
+	c.SetCookie("jwt", tokens.AccessToken, int(h.CookieTTL.Seconds()), "/", "", false, true)
+	c.SetCookie("RT", tokens.RefreshToken, int(h.CookieTTL.Seconds()), "/", "", false, true)
 	c.JSON(http.StatusOK, tokens)
 }

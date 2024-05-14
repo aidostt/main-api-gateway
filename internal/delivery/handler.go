@@ -9,22 +9,20 @@ import (
 )
 
 type Handler struct {
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
-	Dialog          *dialog.Dialog
-	Environment     string
-	TokenManager    manager.TokenManager
-	HttpAddress     string
+	CookieTTL    time.Duration
+	Dialog       *dialog.Dialog
+	Environment  string
+	TokenManager manager.TokenManager
+	HttpAddress  string
 }
 
 func NewHandler(handler Handler) *Handler {
 	return &Handler{
-		Dialog:          handler.Dialog,
-		AccessTokenTTL:  handler.AccessTokenTTL,
-		RefreshTokenTTL: handler.RefreshTokenTTL,
-		Environment:     handler.Environment,
-		TokenManager:    handler.TokenManager,
-		HttpAddress:     handler.HttpAddress,
+		Dialog:       handler.Dialog,
+		CookieTTL:    handler.CookieTTL,
+		Environment:  handler.Environment,
+		TokenManager: handler.TokenManager,
+		HttpAddress:  handler.HttpAddress,
 	}
 }
 
@@ -44,6 +42,7 @@ func (h *Handler) Init() *gin.Engine {
 	api := router.Group("/api")
 	{
 		h.auth(api)
+		api.Use(h.userIdentity)
 		h.qr(api)
 		h.user(api)
 		h.restaurant(api)

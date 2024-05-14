@@ -17,36 +17,23 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	id, roles, err := h.parseAuthHeader(c)
 	if err != nil {
 		switch err.Error() {
-		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
-			return
-		default:
-			newResponse(c, http.StatusInternalServerError, "failed to parse jwt to id")
-			return
-		}
-
-	}
-	c.Set(idCtx, id)
-	c.Set(roleCtx, roles)
-	c.Next()
-}
-func (h *Handler) isExpired(c *gin.Context) {
-	_, _, err := h.parseAuthHeader(c)
-	if err != nil {
-		switch err.Error() {
 		case domain.ErrTokenExpired.Error():
 			h.refresh(c)
 			c.Next()
 		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
 			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			return
+		case domain.ErrTokenExpired.Error():
+			break
 		default:
-			newResponse(c, http.StatusInternalServerError, "failed to parse jwt to id")
+			newResponse(c, http.StatusInternalServerError, "failed to parse jwt to id: "+err.Error())
+			return
 		}
-		return
 	}
+	c.Set(idCtx, id)
+	c.Set(roleCtx, roles)
 	c.Next()
 }
-
 func (h *Handler) parseAuthHeader(c *gin.Context) (string, []string, error) {
 	token, err := c.Cookie("jwt")
 	if err != nil {
@@ -66,7 +53,6 @@ func (h *Handler) isPermitted(requiredRole string) gin.HandlerFunc {
 			newResponse(c, http.StatusUnauthorized, "unauthorized access")
 			return
 		}
-
 		for _, role := range userRoles.([]string) {
 			if role == requiredRole {
 				return // User has the required role, so we allow access

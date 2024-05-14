@@ -12,7 +12,7 @@ func (h *Handler) qr(api *gin.RouterGroup) {
 	qr := api.Group("/qr")
 	{
 		authenticated := qr.Group("/", h.userIdentity)
-		authenticated.Use(h.isExpired)
+		//authenticated.Use(h.isExpired)
 		{
 			authenticated.POST("/generate", h.generateQR)
 			//TODO: id = reservation ID

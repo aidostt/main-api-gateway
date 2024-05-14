@@ -29,8 +29,11 @@ type (
 		QRs          MicroserviceConfig `mapstructure:"qrMicroservice"`
 		HTTP         HTTPConfig         `mapstructure:"http"`
 		JWT          JWTConfig          `mapstructure:"jwt"`
+		Cookie       CookieConfig       `mapstructure:"cookie"`
 	}
-
+	CookieConfig struct {
+		Ttl time.Duration `mapstructure:"ttl"`
+	}
 	GRPCConfig struct {
 		Host    string        `mapstructure:"host"`
 		Port    string        `mapstructure:"port"`
@@ -84,7 +87,10 @@ func unmarshal(cfg *Config) error {
 	if err := viper.UnmarshalKey("qrMicroservice", &cfg.QRs); err != nil {
 		return err
 	}
-	if err := viper.UnmarshalKey("jwt", &cfg.JWT); err != nil {
+	if err := viper.UnmarshalKey("auth", &cfg.JWT); err != nil {
+		return err
+	}
+	if err := viper.UnmarshalKey("cookie", &cfg.Cookie); err != nil {
 		return err
 	}
 	return viper.UnmarshalKey("grpc", &cfg.GRPC)
