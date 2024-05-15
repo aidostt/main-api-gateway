@@ -6,17 +6,22 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 func (h *Handler) table(api *gin.RouterGroup) {
 	tables := api.Group("tables")
 	{
-		tables.GET("/view/:id", h.getTable)
-		tables.GET("/all/restaurant/:id", h.getTablesByRestId)
-		tables.POST("/add", h.addTable)
-		tables.DELETE("/delete/:id", h.deleteTableById)
+		//all
 		tables.GET("/all/restaurant/available/:id", h.getAvailableTables)
 		tables.GET("/all/restaurant/reserved/:id", h.getReservedTables)
+		tables.GET("/view/:id", h.getTable)
+		tables.GET("/all/restaurant/:id", h.getTablesByRestId)
+
+		//admin, restaurant authorities
+		tables.Use(h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
+		tables.POST("/add", h.addTable)
+		tables.DELETE("/delete/:id", h.deleteTableById)
 		tables.PATCH("/update/:id", h.updateTableById)
 	}
 }

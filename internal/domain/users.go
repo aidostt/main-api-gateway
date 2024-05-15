@@ -9,7 +9,9 @@ type User struct {
 }
 
 const (
-	UserRole  = "user"
-	AdminRole = "admin"
-	Plug      = "plug"
+	UserRole            = "user"
+	AdminRole           = "admin"
+	RestaurantAdminRole = "restaurantAdmin"
+	WaiterRole          = "waiter"
+	Plug                = "plug"
 )

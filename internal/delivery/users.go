@@ -12,10 +12,12 @@ import (
 func (h *Handler) user(api *gin.RouterGroup) {
 	users := api.Group("/users")
 	{
-		users.GET("/view/id/:id", h.getByID)
-		users.GET("/view/email/:email", h.getByEmail)
 		users.DELETE("/delete", h.deleteUser)
 		users.PATCH("/update", h.updateUser)
+
+		users.Use(h.isPermitted([]string{domain.AdminRole}))
+		users.GET("/view/id/:id", h.getByID)
+		users.GET("/view/email/:email", h.getByEmail)
 	}
 }
 

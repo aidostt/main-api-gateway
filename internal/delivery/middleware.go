@@ -21,7 +21,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 			h.refresh(c)
 			c.Next()
 		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: "+err.Error())
 			return
 		case domain.ErrTokenExpired.Error():
 			break
@@ -46,22 +46,36 @@ func (h *Handler) parseAuthHeader(c *gin.Context) (string, []string, error) {
 	return id, roles, nil
 }
 
-func (h *Handler) isPermitted(requiredRole string) gin.HandlerFunc {
+func (h *Handler) isPermitted(permittedRoles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRoles, exists := c.Get(roleCtx)
+
 		if !exists {
-			newResponse(c, http.StatusUnauthorized, "unauthorized access")
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: missing roles")
 			return
 		}
-		for _, role := range userRoles.([]string) {
-			if role == requiredRole {
-				return // User has the required role, so we allow access
-			}
-		}
 
-		// If no required role is found in the user's roles
-		newResponse(c, http.StatusUnauthorized, "unauthorized access")
+		if !hasAnyPermittedRole(userRoles.([]string), permittedRoles) {
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: access denied due to RBAC")
+		}
+		c.Next()
 	}
+}
+
+// hasAnyPermittedRole checks if there's any intersection between userRoles and permittedRoles.
+func hasAnyPermittedRole(userRoles []string, permittedRoles []string) bool {
+	permittedSet := make(map[string]bool)
+	for _, role := range permittedRoles {
+		permittedSet[role] = true
+	}
+
+	for _, role := range userRoles {
+		if permittedSet[role] {
+			return true
+		}
+	}
+
+	return false
 }
 
 func corsMiddleware(c *gin.Context) {

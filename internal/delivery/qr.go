@@ -6,17 +6,16 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 func (h *Handler) qr(api *gin.RouterGroup) {
 	qr := api.Group("/qr")
 	{
 		authenticated := qr.Group("/", h.userIdentity)
-		//authenticated.Use(h.isExpired)
 		{
 			authenticated.POST("/generate", h.generateQR)
-			//TODO: id = reservation ID
-			authenticated.GET("/scan/:id", h.scanQR)
+			authenticated.GET("/scan/:reservationID", h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}), h.scanQR)
 		}
 	}
 }
@@ -60,7 +59,7 @@ func (h *Handler) generateQR(c *gin.Context) {
 }
 
 func (h *Handler) scanQR(c *gin.Context) {
-	reservationID := c.Param("id")
+	reservationID := c.Param("reservationID")
 	if reservationID == "" {
 		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
 		return

@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 func (h *Handler) restaurant(api *gin.RouterGroup) {
@@ -13,9 +14,13 @@ func (h *Handler) restaurant(api *gin.RouterGroup) {
 	{
 		restaurants.GET("/view/:id", h.getRestaurant)
 		restaurants.GET("/all", h.getAllRestaurants)
+
+		//admin, restaurant authorities
+		restaurants.Use(h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
 		restaurants.POST("/add", h.addRestaurant)
 		restaurants.DELETE("/delete/:id", h.deleteRestaurantById)
 		restaurants.PATCH("/update/:id", h.updateRestById)
+
 	}
 }
 
