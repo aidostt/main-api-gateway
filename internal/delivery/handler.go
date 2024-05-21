@@ -42,12 +42,12 @@ func (h *Handler) Init() *gin.Engine {
 	api := router.Group("/api")
 	{
 		h.auth(api)
+		h.restaurant(api)
+		h.table(api)
 		api.Use(h.userIdentity)
 		h.qr(api)
 		h.user(api)
-		h.restaurant(api)
 		h.reservation(api)
-		h.table(api)
 	}
 
 	return router

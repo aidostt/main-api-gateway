@@ -15,7 +15,8 @@ func (h *Handler) reservation(api *gin.RouterGroup) {
 		reservations.GET("/view/:id", h.getReservation)
 		reservations.PATCH("/update", h.updateReservation)
 		reservations.DELETE("/cancel/:id", h.deleteReservationById)
-		reservations.GET("/all", h.getAllReservationsByUserId)
+		reservations.GET("all/user", h.getAllReservationsByUserId)
+		reservations.GET("all/restaurant/:id", h.getAllReservationsByRestaurantId)
 		reservations.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
 		reservations.GET("/view/table/:id", h.getTableByReservationId)
 	}
@@ -193,7 +194,7 @@ func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	reservation, err := client.GetAllReservationByUserId(c.Request.Context(), &proto_reservation.IDRequest{Id: userID.(string)})
+	reservations, err := client.GetAllReservationByUserId(c.Request.Context(), &proto_reservation.IDRequest{Id: userID.(string)})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -211,7 +212,42 @@ func (h *Handler) getAllReservationsByUserId(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, reservation)
+	c.JSON(http.StatusOK, reservations)
+}
+
+func (h *Handler) getAllReservationsByRestaurantId(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_reservation.NewReservationClient(conn)
+
+	reservations, err := client.GetAllReservationByRestaurantId(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, reservations)
 }
 
 func (h *Handler) getRestaurantByReservationId(c *gin.Context) {

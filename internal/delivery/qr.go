@@ -12,11 +12,9 @@ import (
 func (h *Handler) qr(api *gin.RouterGroup) {
 	qr := api.Group("/qr")
 	{
-		authenticated := qr.Group("/", h.userIdentity)
-		{
-			authenticated.POST("/generate", h.generateQR)
-			authenticated.GET("/scan/:reservationID", h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}), h.scanQR)
-		}
+		qr.POST("/generate", h.generateQR)
+		qr.GET("/scan/:reservationID", h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}), h.scanQR)
+
 	}
 }
 

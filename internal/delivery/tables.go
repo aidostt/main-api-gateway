@@ -19,6 +19,7 @@ func (h *Handler) table(api *gin.RouterGroup) {
 		tables.GET("/all/restaurant/:id", h.getTablesByRestId)
 
 		//admin, restaurant authorities
+		tables.Use(h.userIdentity)
 		tables.Use(h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
 		tables.POST("/add", h.addTable)
 		tables.DELETE("/delete/:id", h.deleteTableById)
@@ -191,7 +192,7 @@ func (h *Handler) getAvailableTables(c *gin.Context) {
 	}
 	client := proto_table.NewTableClient(conn)
 
-	table, err := client.GetAvailableTables(c.Request.Context(), &proto_table.IDRequest{Id: id})
+	tables, err := client.GetAvailableTables(c.Request.Context(), &proto_table.IDRequest{Id: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
@@ -208,7 +209,7 @@ func (h *Handler) getAvailableTables(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, table)
+	c.JSON(http.StatusOK, tables)
 }
 
 func (h *Handler) getReservedTables(c *gin.Context) {
