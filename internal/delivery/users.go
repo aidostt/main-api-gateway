@@ -44,13 +44,26 @@ func (h *Handler) updateUser(c *gin.Context) {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")
 		return
 	}
+	roles, ok := c.Get(roleCtx)
+	if !ok {
+		newResponse(c, http.StatusBadRequest, "unauthorized access")
+		return
+	}
+	activated, ok := c.Get(activatedCtx)
+	if !ok {
+		newResponse(c, http.StatusBadRequest, "unauthorized access")
+		return
+	}
+
 	statusResponse, err := client.Update(c.Request.Context(), &proto_user.UpdateRequest{
-		Id:       userID.(string),
-		Name:     inp.Name,
-		Surname:  inp.Surname,
-		Phone:    inp.Phone,
-		Email:    inp.Email,
-		Password: inp.Password,
+		Id:        userID.(string),
+		Name:      inp.Name,
+		Surname:   inp.Surname,
+		Phone:     inp.Phone,
+		Email:     inp.Email,
+		Password:  inp.Password,
+		Roles:     roles.([]string),
+		Activated: activated.(bool),
 	})
 	if err != nil {
 		st, ok := status.FromError(err)

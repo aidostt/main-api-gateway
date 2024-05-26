@@ -69,6 +69,7 @@ func (h *Handler) isActivated() gin.HandlerFunc {
 		activated, exists := c.Get(activatedCtx)
 
 		if !exists {
+			//refresh tokens, check again
 			newResponse(c, http.StatusUnauthorized, "unauthorized access: missing activated field")
 			return
 		}

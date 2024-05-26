@@ -62,6 +62,6 @@ type getUserInput struct {
 	Email string `json:"email"`
 }
 
-type idInput struct {
-	Id string `json:"id"`
+type codeInput struct {
+	Code string `json:"code"`
 }

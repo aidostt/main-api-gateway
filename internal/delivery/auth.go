@@ -1,6 +1,8 @@
 package delivery
 
 import (
+	"context"
+	"errors"
 	proto_auth "github.com/aidostt/protos/gen/go/reservista/authentication"
 	proto_mailer "github.com/aidostt/protos/gen/go/reservista/mailer"
 	proto_user "github.com/aidostt/protos/gen/go/reservista/user"
@@ -8,18 +10,17 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
-	"reservista.kz/internal/domain"
-	"time"
 )
 
 func (h *Handler) auth(api *gin.RouterGroup) {
 	users := api.Group("/auth")
 	{
 		users.POST("/sign-up", h.userSignUp)
-		users.POST("/activate/:token", h.userActivation)
 		users.POST("/sign-in", h.userSignIn)
 		authenticated := users.Group("/", h.userIdentity)
 		{
+			users.POST("/activate", h.userActivation)
+			users.POST("/new-activation-code", h.sendNewVerificationCode)
 			authenticated.GET("/healthcheck", h.healthcheck)
 			authenticated.POST("/sign-out", h.signOut)
 		}
@@ -63,59 +64,54 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		}
 		return
 	}
-	conn.Close()
 	h.setCookies(c, tokenResponse{
 		AccessToken:  resp.Tokens.Jwt,
 		RefreshToken: resp.Tokens.Rt,
 	})
-	go func() {
-		conn, err = h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
-		defer conn.Close()
-		if err != nil {
-			newResponse(c, http.StatusInternalServerError, "couldn't open connection with notification service")
+	err = h.sendVerificationCodeMail(c.Request.Context(), inp.Email, resp.GetActivationToken())
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sending notification: "+err.Error())
 			return
 		}
-		mailerClient := proto_mailer.NewMailerClient(conn)
-		_, err = mailerClient.SendWelcome(c.Request.Context(), &proto_mailer.ContentInput{
-			Email:   inp.Email,
-			Content: "http://" + h.HttpAddress + "/api/auth/activate/" + resp.GetActivationToken(),
-		})
-		if err != nil {
-			st, ok := status.FromError(err)
-			if !ok {
-				// Error was not a gRPC status error
-				newResponse(c, http.StatusInternalServerError, "unknown error when calling sending notification: "+err.Error())
-				return
-			}
-			switch st.Code() {
-			case codes.Internal:
-				newResponse(c, http.StatusInternalServerError, "failed to send welcome message: "+err.Error())
-			default:
-				newResponse(c, http.StatusInternalServerError, "unknown error when sending notification: "+err.Error())
-			}
-			return
+		switch st.Code() {
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "failed to send welcome message: "+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when sending notification: "+err.Error())
 		}
-	}()
+		return
+	}
 	c.JSON(http.StatusCreated, nil)
 }
 
-//TODO: create new endpoint that will create new activation token and send it to user
-
 func (h *Handler) userActivation(c *gin.Context) {
-	token := c.Param("token")
-	if token == "" {
-		newResponse(c, http.StatusBadRequest, "missing token in the URL")
+	id, exists := c.Get(idCtx)
+	if !exists {
+		newResponse(c, http.StatusUnauthorized, "missing id in context")
+	}
+	roles, exists := c.Get(idCtx)
+	if !exists {
+		newResponse(c, http.StatusUnauthorized, "missing roles in context")
+	}
+
+	var code codeInput
+	if err := c.BindJSON(&code); err != nil {
+		newResponse(c, http.StatusBadRequest, "invalid input body")
 		return
 	}
-	id, expiry, err := h.TokenManager.ParseActivationToken(token)
+
+	dbCode, _, err := h.verificationCode(c)
 	if err != nil {
-		newResponse(c, http.StatusBadRequest, "failed while parsing token: "+err.Error())
 		return
 	}
-	if expiry.Before(time.Now()) {
-		newResponse(c, http.StatusNotFound, "link is expired")
+	if code.Code != dbCode {
+		newResponse(c, http.StatusBadRequest, "renew your activation code")
 		return
 	}
+
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
 	defer conn.Close()
 	if err != nil {
@@ -123,32 +119,8 @@ func (h *Handler) userActivation(c *gin.Context) {
 		return
 	}
 	userClient := proto_user.NewUserClient(conn)
-	user, err := userClient.GetByID(c.Request.Context(), &proto_user.GetRequest{
-		UserId: id,
-		Email:  domain.Plug,
-	})
-	if err != nil {
-		st, ok := status.FromError(err)
-		if !ok {
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling user activate:"+err.Error())
-			return
-		}
-		switch st.Code() {
-		case codes.InvalidArgument:
-			newResponse(c, http.StatusBadRequest, "non-existent id")
-		case codes.Internal:
-			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
-		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when user activate:"+err.Error())
-		}
-		return
-	}
-	if user.GetActivated() {
-		newResponse(c, http.StatusOK, "already activated")
-		return
-	}
 	statusResponse, err := userClient.Activate(c.Request.Context(), &proto_user.ActivateRequest{
-		UserID:   id,
+		UserID:   id.(string),
 		Activate: true,
 	})
 	if err != nil {
@@ -171,7 +143,115 @@ func (h *Handler) userActivation(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "unknown error when activate user:"+err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, "user activated successfully!")
+
+	client := proto_auth.NewAuthClient(conn)
+	tokens, err := client.CreateSession(c.Request.Context(), &proto_auth.CreateRequest{
+		Id:        id.(string),
+		Roles:     roles.([]string),
+		Activated: true,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign in:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.Unauthenticated:
+			newResponse(c, http.StatusUnauthorized, err.Error())
+
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when creating new session: "+err.Error())
+		}
+		return
+	}
+
+	h.setCookies(c, tokenResponse{
+		AccessToken:  tokens.Jwt,
+		RefreshToken: tokens.Rt,
+	})
+	c.JSON(http.StatusOK, tokens)
+}
+
+func (h *Handler) sendNewVerificationCode(c *gin.Context) {
+	code, email, err := h.verificationCode(c)
+	if err != nil {
+		return
+	}
+	err = h.sendVerificationCodeMail(c.Request.Context(), email, code)
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sending notification: "+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "failed to send welcome message: "+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when sending notification: "+err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+}
+
+func (h *Handler) sendVerificationCodeMail(ctx context.Context, email string, code string) error {
+	errChan := make(chan error)
+	go func() {
+		conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
+		defer conn.Close()
+		if err != nil {
+			errChan <- err
+			return
+		}
+		mailerClient := proto_mailer.NewMailerClient(conn)
+		_, err = mailerClient.SendWelcome(ctx, &proto_mailer.ContentInput{
+			Email:   email,
+			Content: code,
+		})
+		if err != nil {
+			errChan <- err
+			return
+		}
+	}()
+	return <-errChan
+}
+
+func (h *Handler) verificationCode(c *gin.Context) (string, string, error) {
+	id, exists := c.Get(idCtx)
+	if !exists {
+		newResponse(c, http.StatusUnauthorized, "missing id in context")
+		return "", "", errors.New("missing id in context")
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return "", "", err
+	}
+	userClient := proto_user.NewUserClient(conn)
+	codeResponse, err := userClient.VerificationCode(c.Request.Context(), &proto_user.GetRequest{UserId: id.(string)})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sending notification: "+err.Error())
+			return "", "", err
+		}
+		switch st.Code() {
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, err.Error())
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "not found in db: "+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when getting verification code: "+err.Error())
+		}
+		return "", "", err
+	}
+	return codeResponse.GetCode(), codeResponse.GetEmail(), err
 }
 
 func (h *Handler) userSignIn(c *gin.Context) {
