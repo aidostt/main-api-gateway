@@ -20,6 +20,7 @@ func (h *Handler) table(api *gin.RouterGroup) {
 
 		//admin, restaurant authorities
 		tables.Use(h.userIdentity)
+		tables.Use(h.isActivated())
 		tables.Use(h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
 		tables.POST("/add", h.addTable)
 		tables.DELETE("/delete/:id", h.deleteTableById)

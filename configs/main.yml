@@ -5,7 +5,7 @@ http:
   writeTimeout: 10s
 
 auth:
-  accessTokenTTL: 15m
+  accessTokenTTL: 5s
   refreshTokenTTL: 12h
 
 cookie:
@@ -29,4 +29,9 @@ reservationMicroservice:
 qrMicroservice:
   host: localhost
   port: 7070
+
+
+notificationMicroservice:
+  host: localhost
+  port: 6060
 

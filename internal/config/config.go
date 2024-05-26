@@ -21,15 +21,16 @@ const (
 
 type (
 	Config struct {
-		Environment  string
-		Authority    string
-		GRPC         GRPCConfig         `mapstructure:"grpc"`
-		Users        MicroserviceConfig `mapstructure:"userMicroservice"`
-		Reservations MicroserviceConfig `mapstructure:"reservationMicroservice"`
-		QRs          MicroserviceConfig `mapstructure:"qrMicroservice"`
-		HTTP         HTTPConfig         `mapstructure:"http"`
-		JWT          JWTConfig          `mapstructure:"jwt"`
-		Cookie       CookieConfig       `mapstructure:"cookie"`
+		Environment   string
+		Authority     string
+		GRPC          GRPCConfig         `mapstructure:"grpc"`
+		Users         MicroserviceConfig `mapstructure:"userMicroservice"`
+		Reservations  MicroserviceConfig `mapstructure:"reservationMicroservice"`
+		QRs           MicroserviceConfig `mapstructure:"qrMicroservice"`
+		Notifications MicroserviceConfig `mapstructure:"notificationMicroservice"`
+		HTTP          HTTPConfig         `mapstructure:"http"`
+		JWT           JWTConfig          `mapstructure:"jwt"`
+		Cookie        CookieConfig       `mapstructure:"cookie"`
 	}
 	CookieConfig struct {
 		Ttl time.Duration `mapstructure:"ttl"`
@@ -85,6 +86,9 @@ func unmarshal(cfg *Config) error {
 		return err
 	}
 	if err := viper.UnmarshalKey("qrMicroservice", &cfg.QRs); err != nil {
+		return err
+	}
+	if err := viper.UnmarshalKey("notificationMicroservice", &cfg.Notifications); err != nil {
 		return err
 	}
 	if err := viper.UnmarshalKey("auth", &cfg.JWT); err != nil {

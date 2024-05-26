@@ -12,6 +12,7 @@ import (
 func (h *Handler) qr(api *gin.RouterGroup) {
 	qr := api.Group("/qr")
 	{
+		qr.Use(h.isActivated())
 		qr.POST("/generate", h.generateQR)
 		qr.GET("/scan/:reservationID", h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}), h.scanQR)
 
@@ -30,7 +31,6 @@ func (h *Handler) generateQR(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "something went wrong...")
 		return
 	}
-	//TODO: validate qr content
 	qr := proto_qr.NewQRClient(conn)
 	resp, err := qr.Generate(c.Request.Context(), &proto_qr.GenerateRequest{
 		Content: "http://" + h.HttpAddress + "/api/qr/scan/" + inp.ReservationID,
@@ -69,7 +69,6 @@ func (h *Handler) scanQR(c *gin.Context) {
 		return
 	}
 	qr := proto_qr.NewQRClient(conn)
-	//TODO: check whether user from context is admin/restaurant stuff
 	userID, ok := c.Get(idCtx)
 	if !ok {
 		newResponse(c, http.StatusBadRequest, "unauthorized access")

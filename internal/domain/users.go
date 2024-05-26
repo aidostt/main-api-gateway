@@ -13,5 +13,6 @@ const (
 	AdminRole           = "admin"
 	RestaurantAdminRole = "restaurantAdmin"
 	WaiterRole          = "waiter"
+	ActivatedRole       = "activated"
 	Plug                = "plug"
 )

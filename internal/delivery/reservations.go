@@ -11,12 +11,14 @@ import (
 func (h *Handler) reservation(api *gin.RouterGroup) {
 	reservations := api.Group("/reservations")
 	{
+		reservations.GET("all/restaurant/:id", h.getAllReservationsByRestaurantId)
+
+		reservations.Use(h.isActivated())
 		reservations.POST("/make", h.makeReservation)
 		reservations.GET("/view/:id", h.getReservation)
 		reservations.PATCH("/update", h.updateReservation)
 		reservations.DELETE("/cancel/:id", h.deleteReservationById)
 		reservations.GET("all/user", h.getAllReservationsByUserId)
-		reservations.GET("all/restaurant/:id", h.getAllReservationsByRestaurantId)
 		reservations.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
 		reservations.GET("/view/table/:id", h.getTableByReservationId)
 	}

@@ -63,4 +63,5 @@ func (h *Handler) refresh(c *gin.Context) {
 		AccessToken:  tokens.Jwt,
 		RefreshToken: tokens.Rt,
 	})
+	c.JSON(http.StatusOK, tokens)
 }

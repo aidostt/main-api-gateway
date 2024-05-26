@@ -9,12 +9,13 @@ import (
 const (
 	authorizationHeader = "Authorization"
 
-	idCtx   = "userId"
-	roleCtx = "userRoles"
+	idCtx        = "userId"
+	roleCtx      = "userRoles"
+	activatedCtx = "userActivated"
 )
 
 func (h *Handler) userIdentity(c *gin.Context) {
-	id, roles, err := h.parseAuthHeader(c)
+	id, roles, activated, err := h.parseAuthHeader(c)
 	if err != nil {
 		switch err.Error() {
 		case domain.ErrTokenExpired.Error():
@@ -32,18 +33,19 @@ func (h *Handler) userIdentity(c *gin.Context) {
 	}
 	c.Set(idCtx, id)
 	c.Set(roleCtx, roles)
+	c.Set(activatedCtx, activated)
 	c.Next()
 }
-func (h *Handler) parseAuthHeader(c *gin.Context) (string, []string, error) {
+func (h *Handler) parseAuthHeader(c *gin.Context) (string, []string, bool, error) {
 	token, err := c.Cookie("jwt")
 	if err != nil {
-		return "", nil, err
+		return "", nil, false, err
 	}
-	id, roles, err := h.TokenManager.Parse(token)
+	id, roles, activated, err := h.TokenManager.Parse(token)
 	if err != nil {
-		return "", nil, err
+		return "", nil, false, err
 	}
-	return id, roles, nil
+	return id, roles, activated, nil
 }
 
 func (h *Handler) isPermitted(permittedRoles []string) gin.HandlerFunc {
@@ -56,7 +58,23 @@ func (h *Handler) isPermitted(permittedRoles []string) gin.HandlerFunc {
 		}
 
 		if !hasAnyPermittedRole(userRoles.([]string), permittedRoles) {
-			newResponse(c, http.StatusUnauthorized, "unauthorized access: access denied due to RBAC")
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: access denied due to RBAC missing")
+		}
+		c.Next()
+	}
+}
+
+func (h *Handler) isActivated() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		activated, exists := c.Get(activatedCtx)
+
+		if !exists {
+			newResponse(c, http.StatusUnauthorized, "unauthorized access: missing activated field")
+			return
+		}
+
+		if !activated.(bool) {
+			newResponse(c, http.StatusPartialContent, "activate your account first")
 		}
 		c.Next()
 	}
@@ -88,7 +106,6 @@ func corsMiddleware(c *gin.Context) {
 	if c.Request.Method != "OPTIONS" {
 		c.Next()
 	} else {
-		//TODO: solve problem with CORS policy
 		c.AbortWithStatus(http.StatusOK)
 	}
 }
