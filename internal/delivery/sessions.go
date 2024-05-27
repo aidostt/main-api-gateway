@@ -28,7 +28,6 @@ func (h *Handler) refresh(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
 	defer conn.Close()
 	if err != nil {
@@ -50,7 +49,7 @@ func (h *Handler) refresh(c *gin.Context) {
 		}
 		switch st.Code() {
 		case codes.Unauthenticated:
-			newResponse(c, http.StatusUnauthorized, "unauthorized access: "+err.Error())
+			newResponse(c, http.StatusUnauthorized, err.Error())
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		default:

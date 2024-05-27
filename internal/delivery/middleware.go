@@ -21,6 +21,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 		case domain.ErrTokenExpired.Error():
 			h.refresh(c)
 			c.Next()
+			return
 		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
 			newResponse(c, http.StatusUnauthorized, "unauthorized access: "+err.Error())
 			return

@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"context"
-	"errors"
 	proto_auth "github.com/aidostt/protos/gen/go/reservista/authentication"
 	proto_mailer "github.com/aidostt/protos/gen/go/reservista/mailer"
 	proto_user "github.com/aidostt/protos/gen/go/reservista/user"
@@ -17,10 +16,10 @@ func (h *Handler) auth(api *gin.RouterGroup) {
 	{
 		users.POST("/sign-up", h.userSignUp)
 		users.POST("/sign-in", h.userSignIn)
-		authenticated := users.Group("/", h.userIdentity)
+		authenticated := users.Use(h.userIdentity)
 		{
 			users.POST("/activate", h.userActivation)
-			users.POST("/new-activation-code", h.sendNewVerificationCode)
+			users.GET("/new-activation-code", h.sendNewVerificationCode)
 			authenticated.GET("/healthcheck", h.healthcheck)
 			authenticated.POST("/sign-out", h.signOut)
 		}
@@ -92,18 +91,13 @@ func (h *Handler) userActivation(c *gin.Context) {
 	if !exists {
 		newResponse(c, http.StatusUnauthorized, "missing id in context")
 	}
-	roles, exists := c.Get(idCtx)
-	if !exists {
-		newResponse(c, http.StatusUnauthorized, "missing roles in context")
-	}
-
 	var code codeInput
 	if err := c.BindJSON(&code); err != nil {
 		newResponse(c, http.StatusBadRequest, "invalid input body")
 		return
 	}
 
-	dbCode, _, err := h.verificationCode(c)
+	dbCode, _, err := h.verificationCode(c, id.(string))
 	if err != nil {
 		return
 	}
@@ -119,6 +113,31 @@ func (h *Handler) userActivation(c *gin.Context) {
 		return
 	}
 	userClient := proto_user.NewUserClient(conn)
+
+	user, err := userClient.GetByID(c.Request.Context(), &proto_user.GetRequest{
+		UserId: id.(string),
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+		}
+		return
+	}
+	if user.Activated {
+		newResponse(c, http.StatusOK, "already activated")
+		return
+	}
 	statusResponse, err := userClient.Activate(c.Request.Context(), &proto_user.ActivateRequest{
 		UserID:   id.(string),
 		Activate: true,
@@ -131,7 +150,7 @@ func (h *Handler) userActivation(c *gin.Context) {
 		}
 		switch st.Code() {
 		case codes.InvalidArgument:
-			newResponse(c, http.StatusBadRequest, "invalid argument")
+			newResponse(c, http.StatusBadRequest, err.Error())
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		default:
@@ -143,39 +162,15 @@ func (h *Handler) userActivation(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "unknown error when activate user:"+err.Error())
 		return
 	}
-
-	client := proto_auth.NewAuthClient(conn)
-	tokens, err := client.CreateSession(c.Request.Context(), &proto_auth.CreateRequest{
-		Id:        id.(string),
-		Roles:     roles.([]string),
-		Activated: true,
-	})
-	if err != nil {
-		st, ok := status.FromError(err)
-		if !ok {
-			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign in:"+err.Error())
-			return
-		}
-		switch st.Code() {
-		case codes.Unauthenticated:
-			newResponse(c, http.StatusUnauthorized, err.Error())
-
-		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when creating new session: "+err.Error())
-		}
-		return
-	}
-
-	h.setCookies(c, tokenResponse{
-		AccessToken:  tokens.Jwt,
-		RefreshToken: tokens.Rt,
-	})
-	c.JSON(http.StatusOK, tokens)
+	h.refresh(c)
 }
 
 func (h *Handler) sendNewVerificationCode(c *gin.Context) {
-	code, email, err := h.verificationCode(c)
+	id, exists := c.Get(idCtx)
+	if !exists {
+		newResponse(c, http.StatusUnauthorized, "missing id in context")
+	}
+	code, email, err := h.verificationCode(c, id.(string))
 	if err != nil {
 		return
 	}
@@ -199,33 +194,24 @@ func (h *Handler) sendNewVerificationCode(c *gin.Context) {
 }
 
 func (h *Handler) sendVerificationCodeMail(ctx context.Context, email string, code string) error {
-	errChan := make(chan error)
-	go func() {
-		conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
-		defer conn.Close()
-		if err != nil {
-			errChan <- err
-			return
-		}
-		mailerClient := proto_mailer.NewMailerClient(conn)
-		_, err = mailerClient.SendWelcome(ctx, &proto_mailer.ContentInput{
-			Email:   email,
-			Content: code,
-		})
-		if err != nil {
-			errChan <- err
-			return
-		}
-	}()
-	return <-errChan
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
+	defer conn.Close()
+	if err != nil {
+		return err
+	}
+	mailerClient := proto_mailer.NewMailerClient(conn)
+	_, err = mailerClient.SendWelcome(ctx, &proto_mailer.ContentInput{
+		Email:   email,
+		Content: code,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (h *Handler) verificationCode(c *gin.Context) (string, string, error) {
-	id, exists := c.Get(idCtx)
-	if !exists {
-		newResponse(c, http.StatusUnauthorized, "missing id in context")
-		return "", "", errors.New("missing id in context")
-	}
+func (h *Handler) verificationCode(c *gin.Context, id string) (string, string, error) {
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Users)
 	defer conn.Close()
 	if err != nil {
@@ -233,7 +219,7 @@ func (h *Handler) verificationCode(c *gin.Context) (string, string, error) {
 		return "", "", err
 	}
 	userClient := proto_user.NewUserClient(conn)
-	codeResponse, err := userClient.VerificationCode(c.Request.Context(), &proto_user.GetRequest{UserId: id.(string)})
+	codeResponse, err := userClient.VerificationCode(c.Request.Context(), &proto_user.GetRequest{UserId: id})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
