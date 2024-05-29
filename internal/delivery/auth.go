@@ -18,8 +18,8 @@ func (h *Handler) auth(api *gin.RouterGroup) {
 		users.POST("/sign-in", h.userSignIn)
 		authenticated := users.Use(h.userIdentity)
 		{
-			users.POST("/activate", h.userActivation)
-			users.GET("/new-activation-code", h.sendNewVerificationCode)
+			authenticated.POST("/activate", h.userActivation)
+			authenticated.GET("/new-activation-code", h.sendNewVerificationCode)
 			authenticated.GET("/healthcheck", h.healthcheck)
 			authenticated.POST("/sign-out", h.signOut)
 		}
@@ -72,18 +72,18 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		st, ok := status.FromError(err)
 		if !ok {
 			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sending notification: "+err.Error())
+			newResponse(c, http.StatusCreated, "unknown error when calling sending notification: "+err.Error())
 			return
 		}
 		switch st.Code() {
 		case codes.Internal:
-			newResponse(c, http.StatusInternalServerError, "failed to send welcome message: "+err.Error())
+			newResponse(c, http.StatusCreated, "failed to send welcome message: "+err.Error())
 		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when sending notification: "+err.Error())
+			newResponse(c, http.StatusCreated, "unknown error when sending notification: "+err.Error())
 		}
 		return
 	}
-	c.JSON(http.StatusCreated, nil)
+	c.JSON(http.StatusOK, nil)
 }
 
 func (h *Handler) userActivation(c *gin.Context) {
@@ -162,6 +162,21 @@ func (h *Handler) userActivation(c *gin.Context) {
 		newResponse(c, http.StatusInternalServerError, "unknown error when activate user:"+err.Error())
 		return
 	}
+	conn, err = h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	mailerClient := proto_mailer.NewMailerClient(conn)
+	_, err = mailerClient.SendWelcome(c.Request.Context(), &proto_mailer.ContentInput{
+		Email:   user.GetEmail(),
+		Content: "localhost:3000",
+	})
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+
 	h.refresh(c)
 }
 
@@ -200,7 +215,7 @@ func (h *Handler) sendVerificationCodeMail(ctx context.Context, email string, co
 		return err
 	}
 	mailerClient := proto_mailer.NewMailerClient(conn)
-	_, err = mailerClient.SendWelcome(ctx, &proto_mailer.ContentInput{
+	_, err = mailerClient.SendAuthCode(ctx, &proto_mailer.ContentInput{
 		Email:   email,
 		Content: code,
 	})

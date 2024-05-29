@@ -1,11 +1,13 @@
 package delivery
 
 import (
+	proto_mailer "github.com/aidostt/protos/gen/go/reservista/mailer"
 	proto_reservation "github.com/aidostt/protos/gen/go/reservista/reservation"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"reservista.kz/internal/domain"
 )
 
 func (h *Handler) reservation(api *gin.RouterGroup) {
@@ -13,14 +15,19 @@ func (h *Handler) reservation(api *gin.RouterGroup) {
 	{
 		reservations.GET("all/restaurant/:id", h.getAllReservationsByRestaurantId)
 
-		reservations.Use(h.isActivated())
-		reservations.POST("/make", h.makeReservation)
-		reservations.GET("/view/:id", h.getReservation)
-		reservations.PATCH("/update", h.updateReservation)
-		reservations.DELETE("/cancel/:id", h.deleteReservationById)
-		reservations.GET("all/user", h.getAllReservationsByUserId)
-		reservations.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
-		reservations.GET("/view/table/:id", h.getTableByReservationId)
+		activated := reservations.Group("/", h.isActivated())
+		{
+			activated.POST("/make", h.makeReservation)
+			activated.GET("/view/:id", h.getReservation)
+			activated.PATCH("/update", h.updateReservation)
+			activated.DELETE("/cancel/:id", h.deleteReservationById)
+			activated.GET("all/user", h.getAllReservationsByUserId)
+			activated.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
+			activated.GET("/view/table/:id", h.getTableByReservationId)
+			activated.GET("/confirm/:id", h.isPermitted([]string{domain.AdminRole, domain.RestaurantAdminRole, domain.WaiterRole}), h.confirmReservation)
+
+			//TODO: confirm reservation
+		}
 	}
 }
 
@@ -40,7 +47,7 @@ func (h *Handler) makeReservation(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	statusResponse, err := client.MakeReservation(c.Request.Context(), &proto_reservation.ReservationSQLRequest{
+	resp, err := client.MakeReservation(c.Request.Context(), &proto_reservation.ReservationSQLRequest{
 		UserID:          input.UserID,
 		TableID:         input.TableID,
 		ReservationTime: input.ReservationTime,
@@ -55,17 +62,41 @@ func (h *Handler) makeReservation(c *gin.Context) {
 		switch st.Code() {
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusInternalServerError, err.Error())
 		default:
 			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
 		}
 		return
 	}
-	if !statusResponse.GetStatus() {
-		newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+	// Sending email to user
+	conn, err = h.Dialog.NewConnection(h.Dialog.Addresses.Notifications)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	mailerClient := proto_mailer.NewMailerClient(conn)
+	_, err = mailerClient.SendQR(c.Request.Context(), &proto_mailer.QRInput{
+		UserID:        input.UserID,
+		ReservationID: resp.GetId(),
+		QRUrlBase:     "http://" + h.HttpAddress + "/api/reservations/confirm/" + resp.GetId(),
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusCreated, "unknown error when calling sending notification: "+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.Internal:
+			newResponse(c, http.StatusCreated, "failed to send reservation message: "+err.Error())
+		default:
+			newResponse(c, http.StatusCreated, "unknown error when sending notification: "+err.Error())
+		}
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"ok": statusResponse.Status})
+	newResponse(c, http.StatusOK, "")
 }
 
 func (h *Handler) getReservation(c *gin.Context) {
@@ -119,8 +150,8 @@ func (h *Handler) updateReservation(c *gin.Context) {
 	}
 	client := proto_reservation.NewReservationClient(conn)
 
-	statusResponse, err := client.UpdateReservation(c.Request.Context(), &proto_reservation.ReservationSQLRequest{
-		UserID:          input.ReservationID,
+	statusResponse, err := client.UpdateReservation(c.Request.Context(), &proto_reservation.UpdateReservationRequest{
+		ReservationID:   input.ReservationID,
 		TableID:         input.TableID,
 		ReservationTime: input.ReservationTime,
 	})
@@ -180,6 +211,43 @@ func (h *Handler) deleteReservationById(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, reservation)
+}
+
+func (h *Handler) confirmReservation(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_reservation.NewReservationClient(conn)
+
+	ok, err := client.ConfirmReservation(c.Request.Context(), &proto_reservation.IDRequest{Id: id})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			// Error was not a gRPC status error
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.NotFound:
+			newResponse(c, http.StatusBadRequest, err.Error())
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, ok)
 }
 
 func (h *Handler) getAllReservationsByUserId(c *gin.Context) {

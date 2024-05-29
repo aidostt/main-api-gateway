@@ -3,7 +3,7 @@ module reservista.kz
 go 1.20
 
 require (
-	github.com/aidostt/protos v0.5.6
+	github.com/aidostt/protos v0.6.0
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/joho/godotenv v1.5.1

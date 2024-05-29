@@ -20,8 +20,6 @@ func (h *Handler) userIdentity(c *gin.Context) {
 		switch err.Error() {
 		case domain.ErrTokenExpired.Error():
 			h.refresh(c)
-			c.Next()
-			return
 		case http.ErrNoCookie.Error(), domain.ErrUnauthorized.Error(), domain.ErrTokenInvalidElements.Error():
 			newResponse(c, http.StatusUnauthorized, "unauthorized access: "+err.Error())
 			return
@@ -70,13 +68,13 @@ func (h *Handler) isActivated() gin.HandlerFunc {
 		activated, exists := c.Get(activatedCtx)
 
 		if !exists {
-			//refresh tokens, check again
 			newResponse(c, http.StatusUnauthorized, "unauthorized access: missing activated field")
 			return
 		}
 
 		if !activated.(bool) {
 			newResponse(c, http.StatusPartialContent, "activate your account first")
+			return
 		}
 		c.Next()
 	}

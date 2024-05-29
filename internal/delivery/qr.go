@@ -32,7 +32,7 @@ func (h *Handler) generateQR(c *gin.Context) {
 	}
 	qr := proto_qr.NewQRClient(conn)
 	resp, err := qr.Generate(c.Request.Context(), &proto_qr.GenerateRequest{
-		Content: "http://" + h.HttpAddress + "/api/qr/scan/" + inp.ReservationID,
+		Content: "http://" + h.HttpAddress + "/api/reservations/confirm/" + inp.ReservationID,
 	})
 	if err != nil {
 		st, ok := status.FromError(err)

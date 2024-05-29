@@ -21,6 +21,10 @@ type reservationInput struct {
 	ReservationTime string `json:"reservation_time"`
 }
 
+type idInput struct {
+	ID string `json:"id"`
+}
+
 type reservationUpdateInput struct {
 	ReservationID   string `json:"reservation_id"`
 	TableID         string `json:"table_id"`
