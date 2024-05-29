@@ -63,7 +63,7 @@ func (h *Handler) makeReservation(c *gin.Context) {
 		case codes.Internal:
 			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
 		case codes.InvalidArgument:
-			newResponse(c, http.StatusInternalServerError, err.Error())
+			newResponse(c, http.StatusBadRequest, err.Error())
 		default:
 			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
 		}
@@ -96,7 +96,7 @@ func (h *Handler) makeReservation(c *gin.Context) {
 		}
 		return
 	}
-	newResponse(c, http.StatusOK, "")
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 func (h *Handler) getReservation(c *gin.Context) {

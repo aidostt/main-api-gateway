@@ -15,9 +15,9 @@ func (h *Handler) user(api *gin.RouterGroup) {
 		users.DELETE("/delete", h.deleteUser)
 		users.PATCH("/update", h.updateUser)
 
+		users.GET("/view/id/:id", h.getByID)
 		users.Use(h.isActivated())
 		users.Use(h.isPermitted([]string{domain.AdminRole}))
-		users.GET("/view/id/:id", h.getByID)
 		users.GET("/view/email/:email", h.getByEmail)
 	}
 }

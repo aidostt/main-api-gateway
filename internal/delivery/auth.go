@@ -83,7 +83,7 @@ func (h *Handler) userSignUp(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusOK, StatusResponse{Status: true})
 }
 
 func (h *Handler) userActivation(c *gin.Context) {

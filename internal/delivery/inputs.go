@@ -44,8 +44,8 @@ type signInInput struct {
 	Password string `json:"password" binding:"required,min=8,max=64"`
 }
 
-type refreshInput struct {
-	Token string `json:"token" binding:"required"`
+type StatusResponse struct {
+	Status bool `json:"status" binding:"required"`
 }
 
 type tokenResponse struct {
