@@ -22,6 +22,8 @@ func (h *Handler) restaurant(api *gin.RouterGroup) {
 		restaurants.POST("/add", h.addRestaurant)
 		restaurants.DELETE("/delete/:id", h.deleteRestaurantById)
 		restaurants.PATCH("/update/:id", h.updateRestById)
+		restaurants.POST("/photos/upload/:id", h.uploadRestaurantPhotos)
+		restaurants.DELETE("/photos/delete/:id", h.deleteRestaurantPhoto)
 
 	}
 }
@@ -231,3 +233,128 @@ func (h *Handler) deleteRestaurantById(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"ok": statusResponse.Status})
 }
+
+func (h *Handler) uploadRestaurantPhotos(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
+
+	form, err := c.MultipartForm()
+	if err != nil {
+		newResponse(c, http.StatusBadRequest, "failed to parse multipart form")
+		return
+	}
+	files := form.File["photos"]
+	if len(files) == 0 {
+		newResponse(c, http.StatusBadRequest, "no files uploaded")
+		return
+	}
+
+	var urls []string
+	for _, fileHeader := range files {
+		file, err := fileHeader.Open()
+		if err != nil {
+			newResponse(c, http.StatusInternalServerError, "failed to open file")
+			return
+		}
+		defer file.Close()
+
+		url, err := h.S3Client.UploadFile(c.Request.Context(), file, fileHeader)
+		if err != nil {
+			newResponse(c, http.StatusInternalServerError, "failed to upload file to S3")
+			return
+		}
+		urls = append(urls, url)
+	}
+
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_restaurant.NewRestaurantClient(conn)
+
+	statusResponse, err := client.UploadPhotos(c.Request.Context(), &proto_restaurant.UploadPhotoRequest{
+		RestaurantID: id,
+		Urls:         urls,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling upload photos: "+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality: "+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling upload photos: "+err.Error())
+		}
+		return
+	}
+	if !statusResponse.GetStatus() {
+		newResponse(c, http.StatusInternalServerError, "failed to upload photos")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "urls": urls})
+}
+func (h *Handler) deleteRestaurantPhoto(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		newResponse(c, http.StatusBadRequest, "missing ID in the URL")
+		return
+	}
+
+	var input struct {
+		URL string `json:"url" binding:"required"`
+	}
+	if err := c.BindJSON(&input); err != nil {
+		newResponse(c, http.StatusBadRequest, "invalid input")
+		return
+	}
+
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_restaurant.NewRestaurantClient(conn)
+
+	statusResponse, err := client.DeletePhoto(c.Request.Context(), &proto_restaurant.DeletePhotoRequest{
+		RestaurantID: id,
+		Url:          input.URL,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling delete photo: "+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.InvalidArgument:
+			newResponse(c, http.StatusBadRequest, "invalid argument: "+err.Error())
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality: "+err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling delete photo: "+err.Error())
+		}
+		return
+	}
+	if !statusResponse.GetStatus() {
+		newResponse(c, http.StatusInternalServerError, "failed to delete photo")
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+
+//TODO: create uploadRestaurantPhotos endpoint
+//TODO: retrieve files, upload to s3 amazon service
+//TODO: send urls to uploadPhotos delivery handler of reservation-service

@@ -13,6 +13,7 @@ import (
 	"reservista.kz/pkg/dialog"
 	"reservista.kz/pkg/logger"
 	auth "reservista.kz/pkg/manager"
+	"reservista.kz/pkg/s3client"
 	"syscall"
 	"time"
 )
@@ -31,6 +32,7 @@ func Run(configPath, envPath string) {
 		fmt.Sprintf("%v:%v", cfg.QRs.Host, cfg.QRs.Port),
 		fmt.Sprintf("%v:%v", cfg.Notifications.Host, cfg.Notifications.Port),
 	)
+	s3Client := s3client.NewS3Client(cfg.AWS.Region, cfg.AWS.Bucket)
 	tokenManager, err := auth.NewManager(cfg.JWT.SigningKey)
 	if err != nil {
 		logger.Error(err)
@@ -43,6 +45,7 @@ func Run(configPath, envPath string) {
 			Dialog:       dial,
 			TokenManager: tokenManager,
 			HttpAddress:  cfg.HTTP.Host + ":" + cfg.HTTP.Port,
+			S3Client:     s3Client,
 		})
 
 	// HTTP Server

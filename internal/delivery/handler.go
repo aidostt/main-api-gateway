@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"reservista.kz/pkg/dialog"
 	manager "reservista.kz/pkg/manager"
+	"reservista.kz/pkg/s3client"
 	"time"
 )
 
 type Handler struct {
 	CookieTTL    time.Duration
 	Dialog       *dialog.Dialog
+	S3Client     *s3client.S3Client
 	Environment  string
 	TokenManager manager.TokenManager
 	HttpAddress  string
@@ -23,6 +25,7 @@ func NewHandler(handler Handler) *Handler {
 		Environment:  handler.Environment,
 		TokenManager: handler.TokenManager,
 		HttpAddress:  handler.HttpAddress,
+		S3Client:     handler.S3Client,
 	}
 }
 
