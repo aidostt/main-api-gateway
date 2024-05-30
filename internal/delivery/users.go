@@ -22,10 +22,6 @@ func (h *Handler) user(api *gin.RouterGroup) {
 	}
 }
 
-func (h *Handler) isAllowedRole(c *gin.Context) {
-	//TODO: implement
-}
-
 func (h *Handler) updateUser(c *gin.Context) {
 	var inp userSignUpInput
 	if err := c.BindJSON(&inp); err != nil {

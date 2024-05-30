@@ -25,8 +25,6 @@ func (h *Handler) reservation(api *gin.RouterGroup) {
 			activated.GET("/view/restaurant/:id", h.getRestaurantByReservationId)
 			activated.GET("/view/table/:id", h.getTableByReservationId)
 			activated.GET("/confirm/:id", h.isPermitted([]string{domain.AdminRole, domain.RestaurantAdminRole, domain.WaiterRole}), h.confirmReservation)
-
-			//TODO: confirm reservation
 		}
 	}
 }

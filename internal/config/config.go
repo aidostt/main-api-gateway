@@ -34,8 +34,10 @@ type (
 		AWS           AWSConfig          `mapstructure:"aws"`
 	}
 	AWSConfig struct {
-		Bucket string `mapstructure:"bucket"`
-		Region string `mapstructure:"region"`
+		Bucket     string `mapstructure:"bucket"`
+		Region     string `mapstructure:"region"`
+		AccessKey  string `mapstructure:"accessKey"`
+		PrivateKey string `mapstructure:"privateKey"`
 	}
 	CookieConfig struct {
 		Ttl time.Duration `mapstructure:"ttl"`
@@ -113,6 +115,8 @@ func setFromEnv(cfg *Config) {
 	cfg.JWT.SigningKey = os.Getenv("JWT_SIGNING_KEY")
 	cfg.AWS.Bucket = os.Getenv("AWS_BUCKET")
 	cfg.AWS.Region = os.Getenv("AWS_REGION")
+	cfg.AWS.AccessKey = os.Getenv("AWS_ACCESS_KEY")
+	cfg.AWS.PrivateKey = os.Getenv("AWS_SECRET_KEY")
 }
 
 func parseConfigFile(folder string) error {

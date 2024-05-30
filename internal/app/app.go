@@ -32,7 +32,7 @@ func Run(configPath, envPath string) {
 		fmt.Sprintf("%v:%v", cfg.QRs.Host, cfg.QRs.Port),
 		fmt.Sprintf("%v:%v", cfg.Notifications.Host, cfg.Notifications.Port),
 	)
-	s3Client := s3client.NewS3Client(cfg.AWS.Region, cfg.AWS.Bucket)
+	s3Client := s3client.NewS3Client(cfg.AWS.Region, fmt.Sprintf("http://%s:%s", cfg.HTTP.Host, cfg.HTTP.Port), cfg.AWS.AccessKey, cfg.AWS.PrivateKey, cfg.AWS.Bucket)
 	tokenManager, err := auth.NewManager(cfg.JWT.SigningKey)
 	if err != nil {
 		logger.Error(err)

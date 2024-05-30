@@ -9,6 +9,8 @@ import (
 	"reservista.kz/internal/domain"
 )
 
+//TODO: create some middleware, that will collect data of requested restaurant and use this information in endpoints
+
 func (h *Handler) restaurant(api *gin.RouterGroup) {
 	restaurants := api.Group("/restaurants")
 	{
@@ -93,6 +95,7 @@ func (h *Handler) getRestaurant(c *gin.Context) {
 		Name:    restaurant.GetName(),
 		Address: restaurant.GetAddress(),
 		Contact: restaurant.GetContact(),
+		Photos:  restaurant.GetImageUrls(),
 	})
 }
 
@@ -263,7 +266,7 @@ func (h *Handler) uploadRestaurantPhotos(c *gin.Context) {
 
 		url, err := h.S3Client.UploadFile(c.Request.Context(), file, fileHeader)
 		if err != nil {
-			newResponse(c, http.StatusInternalServerError, "failed to upload file to S3")
+			newResponse(c, http.StatusInternalServerError, err.Error())
 			return
 		}
 		urls = append(urls, url)
@@ -354,7 +357,3 @@ func (h *Handler) deleteRestaurantPhoto(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "success"})
 }
-
-//TODO: create uploadRestaurantPhotos endpoint
-//TODO: retrieve files, upload to s3 amazon service
-//TODO: send urls to uploadPhotos delivery handler of reservation-service

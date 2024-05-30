@@ -30,6 +30,7 @@ func (h *Handler) userIdentity(c *gin.Context) {
 			return
 		}
 	}
+
 	c.Set(idCtx, id)
 	c.Set(roleCtx, roles)
 	c.Set(activatedCtx, activated)

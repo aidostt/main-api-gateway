@@ -9,10 +9,11 @@ type userSignUpInput struct {
 }
 
 type restaurantInput struct {
-	Id      string `json:"id"`
-	Name    string `json:"restaurant_name" binding:"required,min=8,max=64"`
-	Address string `json:"restaurant_address" binding:"required,min=8,max=64"`
-	Contact string `json:"restaurant_contact" binding:"required,max=64"`
+	Id      string   `json:"id"`
+	Name    string   `json:"restaurant_name" binding:"required,min=8,max=64"`
+	Address string   `json:"restaurant_address" binding:"required,min=8,max=64"`
+	Contact string   `json:"restaurant_contact" binding:"required,max=64"`
+	Photos  []string `json:"restaurant_photos" binding:"max=64"`
 }
 
 type reservationInput struct {
