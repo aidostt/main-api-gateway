@@ -47,7 +47,6 @@ func (h *Handler) Init() *gin.Engine {
 		h.auth(api)
 		h.restaurant(api)
 		h.table(api)
-		api.Use(h.userIdentity)
 		h.qr(api)
 		h.user(api)
 		h.reservation(api)

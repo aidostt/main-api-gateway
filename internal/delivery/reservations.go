@@ -11,7 +11,7 @@ import (
 )
 
 func (h *Handler) reservation(api *gin.RouterGroup) {
-	reservations := api.Group("/reservations")
+	reservations := api.Group("/reservations", h.userIdentity)
 	{
 		reservations.GET("all/restaurant/:id", h.getAllReservationsByRestaurantId)
 
@@ -31,6 +31,10 @@ func (h *Handler) reservation(api *gin.RouterGroup) {
 
 func (h *Handler) makeReservation(c *gin.Context) {
 	var input reservationInput
+	userID, exists := c.Get(idCtx)
+	if !exists {
+		newResponse(c, http.StatusUnauthorized, "missing id in context")
+	}
 	if err := c.BindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		c.Abort()
@@ -46,7 +50,7 @@ func (h *Handler) makeReservation(c *gin.Context) {
 	client := proto_reservation.NewReservationClient(conn)
 
 	resp, err := client.MakeReservation(c.Request.Context(), &proto_reservation.ReservationSQLRequest{
-		UserID:          input.UserID,
+		UserID:          userID.(string),
 		TableID:         input.TableID,
 		ReservationTime: input.ReservationTime,
 	})
@@ -75,9 +79,9 @@ func (h *Handler) makeReservation(c *gin.Context) {
 	}
 	mailerClient := proto_mailer.NewMailerClient(conn)
 	_, err = mailerClient.SendQR(c.Request.Context(), &proto_mailer.QRInput{
-		UserID:        input.UserID,
+		UserID:        userID.(string),
 		ReservationID: resp.GetId(),
-		QRUrlBase:     "http://" + h.HttpAddress + "/api/reservations/confirm/" + resp.GetId(),
+		QRUrlBase:     "http://" + h.HttpAddress + "/api/reservations/confirm/",
 	})
 	if err != nil {
 		st, ok := status.FromError(err)

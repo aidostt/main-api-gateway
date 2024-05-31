@@ -19,12 +19,12 @@ func (h *Handler) table(api *gin.RouterGroup) {
 		tables.GET("/all/restaurant/:id", h.getTablesByRestId)
 
 		//admin, restaurant authorities
-		tables.Use(h.userIdentity)
-		tables.Use(h.isActivated())
-		tables.Use(h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
-		tables.POST("/add", h.addTable)
-		tables.DELETE("/delete/:id", h.deleteTableById)
-		tables.PATCH("/update/:id", h.updateTableById)
+		authenticated := tables.Group("/", h.userIdentity, h.isActivated(), h.isPermitted([]string{domain.AdminRole, domain.WaiterRole, domain.RestaurantAdminRole}))
+		{
+			authenticated.POST("/add", h.addTable)
+			authenticated.DELETE("/delete/:id", h.deleteTableById)
+			authenticated.PATCH("/update/:id", h.updateTableById)
+		}
 	}
 }
 

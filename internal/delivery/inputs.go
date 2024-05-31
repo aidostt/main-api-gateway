@@ -17,7 +17,6 @@ type restaurantInput struct {
 }
 
 type reservationInput struct {
-	UserID          string `json:"user_id"`
 	TableID         string `json:"table_id"`
 	ReservationTime string `json:"reservation_time"`
 }
