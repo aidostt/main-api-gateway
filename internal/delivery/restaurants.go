@@ -1,22 +1,23 @@
 package delivery
 
 import (
+	"fmt"
 	proto_restaurant "github.com/aidostt/protos/gen/go/reservista/restaurant"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
 	"reservista.kz/internal/domain"
+	"strconv"
+	"strings"
 )
-
-//TODO: create some middleware, that will collect data of requested restaurant and use this information in endpoints
 
 func (h *Handler) restaurant(api *gin.RouterGroup) {
 	restaurants := api.Group("/restaurants")
 	{
 		restaurants.GET("/view/:id", h.getRestaurant)
-		restaurants.GET("/all", h.getAllRestaurants)
-
+		restaurants.GET("/all", h.searchRestaurants)
+		restaurants.GET("/suggestions", h.getSuggestions)
 		//admin, restaurant authorities
 		authenticated := restaurants.Group("/", h.userIdentity, h.isActivated(), h.isPermitted([]string{domain.AdminRole, domain.RestaurantAdminRole}))
 		{
@@ -28,8 +29,22 @@ func (h *Handler) restaurant(api *gin.RouterGroup) {
 		}
 	}
 }
+func (h *Handler) searchRestaurants(c *gin.Context) {
+	query := c.Query("q")
+	page, err := strconv.Atoi(c.DefaultQuery("page", h.PageDefault))
+	if err != nil || page < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page parameter"})
+		return
+	}
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", h.LimitDefault))
+	if err != nil || limit < 1 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
 
-func (h *Handler) getAllRestaurants(c *gin.Context) {
+	offset := (page - 1) * limit
+	searchQuery := fmt.Sprintf("%%%s%%", strings.ToLower(query))
+
 	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
 	defer conn.Close()
 	if err != nil {
@@ -38,23 +53,61 @@ func (h *Handler) getAllRestaurants(c *gin.Context) {
 	}
 	client := proto_restaurant.NewRestaurantClient(conn)
 
-	restaurants, err := client.GetAllRestaurants(c.Request.Context(), &proto_restaurant.Empty{})
+	restaurants, err := client.SearchRestaurants(c.Request.Context(), &proto_restaurant.SearchRequest{
+		Query:  searchQuery,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
 		st, ok := status.FromError(err)
 		if !ok {
-			// Error was not a gRPC status error
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling search: "+err.Error())
 			return
 		}
 		switch st.Code() {
 		case codes.Internal:
-			newResponse(c, http.StatusInternalServerError, "microservice failed to execute functionality:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, err.Error())
 		default:
-			newResponse(c, http.StatusInternalServerError, "unknown error when calling sign up:"+err.Error())
+			newResponse(c, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}
 	c.JSON(http.StatusOK, restaurants.Restaurants)
+}
+
+func (h *Handler) getSuggestions(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Query parameter is required"})
+		return
+	}
+
+	searchQuery := fmt.Sprintf("%%%s%%", strings.ToLower(query))
+
+	conn, err := h.Dialog.NewConnection(h.Dialog.Addresses.Reservations)
+	defer conn.Close()
+	if err != nil {
+		newResponse(c, http.StatusInternalServerError, "something went wrong...")
+		return
+	}
+	client := proto_restaurant.NewRestaurantClient(conn)
+
+	suggestions, err := client.GetRestaurantSuggestions(c.Request.Context(), &proto_restaurant.SuggestionRequest{Query: searchQuery})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if !ok {
+			newResponse(c, http.StatusInternalServerError, "unknown error when calling suggestions:"+err.Error())
+			return
+		}
+		switch st.Code() {
+		case codes.Internal:
+			newResponse(c, http.StatusInternalServerError, err.Error())
+		default:
+			newResponse(c, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	c.JSON(http.StatusOK, suggestions.Restaurants)
 }
 
 func (h *Handler) getRestaurant(c *gin.Context) {

@@ -17,6 +17,8 @@ const (
 	defaultGRPCPort               = "443"
 	authority                     = "api-gateway"
 	EnvLocal                      = "local"
+	defaultPage                   = "1"
+	defaultLimiter                = "10"
 )
 
 type (
@@ -32,6 +34,11 @@ type (
 		JWT           JWTConfig          `mapstructure:"jwt"`
 		Cookie        CookieConfig       `mapstructure:"cookie"`
 		AWS           AWSConfig          `mapstructure:"aws"`
+		Limiter       LimiterConfig      `mapstructure:"limiter"`
+	}
+	LimiterConfig struct {
+		ElementLimiterDefault string `mapstructure:"elementLimiter"`
+		PageDefault           string `mapstructure:"page"`
 	}
 	AWSConfig struct {
 		Bucket     string `mapstructure:"bucket"`
@@ -104,6 +111,9 @@ func unmarshal(cfg *Config) error {
 	if err := viper.UnmarshalKey("cookie", &cfg.Cookie); err != nil {
 		return err
 	}
+	if err := viper.UnmarshalKey("limiter", &cfg.Limiter); err != nil {
+		return err
+	}
 	return viper.UnmarshalKey("grpc", &cfg.GRPC)
 }
 
@@ -147,4 +157,6 @@ func populateDefaults() {
 	viper.SetDefault("http.timeouts.write", defaultHTTPRWTimeout)
 	viper.SetDefault("jwt.accessTokenTTL", defaultAccessTokenTTL)
 	viper.SetDefault("jwt.refreshTokenTTL", defaultRefreshTokenTTL)
+	viper.SetDefault("limiter.page", defaultPage)
+	viper.SetDefault("limiter.elementLimiter", defaultLimiter)
 }

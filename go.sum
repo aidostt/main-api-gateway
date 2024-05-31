@@ -1,5 +1,7 @@
 github.com/aidostt/protos v0.6.1 h1:4ls5cbtj3yeDDACtoaVMrTW+a+b78UZgRIswh3Pwzlk=
 github.com/aidostt/protos v0.6.1/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
+github.com/aidostt/protos v0.6.2 h1:1uVCs7LgbPNLT0lEeeh+faoImM8EhpsZlfrbeDFCEzI=
+github.com/aidostt/protos v0.6.2/go.mod h1:39rkoQJYNfKI1uAsrDfXJmxD/UIIabS3FN4FHIjb/xc=
 github.com/aws/aws-sdk-go v1.53.12 h1:8f8K+YaTy2qwtGwVIo2Ftq22UCH96xQAX7Q0lyZKDiA=
 github.com/aws/aws-sdk-go v1.53.12/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
 github.com/bytedance/sonic v1.5.0/go.mod h1:ED5hyg4y6t3/9Ku1R6dU/4KyJ48DZ4jPhfY1O2AihPM=

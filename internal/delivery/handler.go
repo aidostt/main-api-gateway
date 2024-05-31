@@ -16,6 +16,8 @@ type Handler struct {
 	Environment  string
 	TokenManager manager.TokenManager
 	HttpAddress  string
+	PageDefault  string
+	LimitDefault string
 }
 
 func NewHandler(handler Handler) *Handler {
@@ -26,6 +28,8 @@ func NewHandler(handler Handler) *Handler {
 		TokenManager: handler.TokenManager,
 		HttpAddress:  handler.HttpAddress,
 		S3Client:     handler.S3Client,
+		PageDefault:  handler.PageDefault,
+		LimitDefault: handler.LimitDefault,
 	}
 }
 

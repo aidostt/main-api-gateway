@@ -11,6 +11,10 @@ auth:
 cookie:
   ttl: 12h
 
+limiter:
+  elementLimiter: 10
+  page: 1
+
 grpc:
   port: 4040
   timeout: 5s

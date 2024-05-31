@@ -46,8 +46,9 @@ func Run(configPath, envPath string) {
 			TokenManager: tokenManager,
 			HttpAddress:  cfg.HTTP.Host + ":" + cfg.HTTP.Port,
 			S3Client:     s3Client,
+			PageDefault:  cfg.Limiter.PageDefault,
+			LimitDefault: cfg.Limiter.ElementLimiterDefault,
 		})
-
 	// HTTP Server
 	httpServer := server.NewServer(cfg, handlers.Init())
 	go func() {
