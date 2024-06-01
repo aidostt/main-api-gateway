@@ -142,13 +142,7 @@ func (h *Handler) getRestaurant(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, restaurantInput{
-		Id:      restaurant.GetId(),
-		Name:    restaurant.GetName(),
-		Address: restaurant.GetAddress(),
-		Contact: restaurant.GetContact(),
-		Photos:  restaurant.GetImageUrls(),
-	})
+	c.JSON(http.StatusOK, restaurant)
 }
 
 func (h *Handler) addRestaurant(c *gin.Context) {
