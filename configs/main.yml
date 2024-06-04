@@ -26,7 +26,7 @@ userMicroservice:
 
 
 reservationMicroservice:
-  host: reservation-service
+  host: localhost
   port: 9090
 
 

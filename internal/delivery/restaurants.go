@@ -72,7 +72,7 @@ func (h *Handler) searchRestaurants(c *gin.Context) {
 		}
 		return
 	}
-	c.JSON(http.StatusOK, restaurants.Restaurants)
+	c.JSON(http.StatusOK, restaurants)
 }
 
 func (h *Handler) getSuggestions(c *gin.Context) {
